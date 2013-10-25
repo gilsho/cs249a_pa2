@@ -3,7 +3,7 @@
 
 #include <string>
 #include "Ptr.h"
-#include "PtrInterface.h"
+#include "fwk/PtrInterface.h"
 
 using std::string;
 using Fwk::Ptr;
