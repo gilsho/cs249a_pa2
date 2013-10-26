@@ -1,16 +1,18 @@
 #ifndef ENGINE_H
 #define ENGINE_H
 
+#include <iostream>
 #include <string>
-
-#include "fwk/NamedInterface.h"
-#include "fwk/BaseNotifiee.h"
-#include "fwk/PtrInterface.h"
-#include "fwk/Ptr.h"
+#include <vector>
+#include <stdint.h>
+#include "PtrInterface.h"
+#include "Ptr.h"
 #include "Instance.h"
 #include "Nominal.h"
-//#include "Ptr.h"
-//#include "PtrInterface.h"
+
+#include <typeinfo>
+
+
 
 using std::vector;
 using std::cerr;
@@ -18,80 +20,78 @@ using std::cerr;
 namespace Shipping {
 
 
-class Minutes : Ordinal<Minutes, unsigned int> {};
+class Minutes : Ordinal<Minutes, unsigned int> {
+public:
+	Minutes(unsigned int _minutes) : Ordinal<Minutes, unsigned int>(_minutes) {}
+};
 
-class Miles : Ordinal<Miles, unsigned int> {};
+class Miles : Ordinal<Miles, unsigned int> {
+public:
+	Miles(unsigned int _miles) : Ordinal<Miles, unsigned int>(_miles) {}
+};
 
-class Dollars : Ordinal<Dollars, float> {};
+class Dollars : Ordinal<Dollars, float> {
+public:
+	Dollars(float _dollars) : Ordinal<Dollars, float>(_dollars) {}
+};
 
-class MilesPerHour : Ordinal<MilesPerHour, float> {};
+class MilesPerHour : Ordinal<MilesPerHour, float> {
+public:
+	MilesPerHour(float _milesPerHour) : Ordinal<MilesPerHour, float>(_milesPerHour) {}
+};
 
 
 class Segment;
 
-class Location : public Fwk::NamedInterface {
-
+class Location : public Fwk::PtrInterface<Location> {
 public:
 
-	typedef Fwk::Ptr<Location const> PtrConst;
+	class Notifiee;
+
   typedef Fwk::Ptr<Location> Ptr;
+  typedef vector<Fwk::Ptr<Segment> >::iterator SegmentIterator;
+  typedef vector<Notifiee *>::iterator NotifieeIterator;
 
-	class NotifieeConst : public virtual Fwk::NamedInterface::NotifieeConst {
-   public:
-      typedef Fwk::Ptr<NotifieeConst const> PtrConst;
-      typedef Fwk::Ptr<NotifieeConst> Ptr;
-      Fwk::String name() const { return (notifier_?notifier_->name():Fwk::String()); }
-      Location::PtrConst notifier() const { return notifier_; }
-      bool isNonReferencing() const { return isNonReferencing_; }
-      NotifieeConst const * lrNext() const { return lrNext_; }
-      NotifieeConst * lrNext() { return lrNext_; }
-      // Non-const interface =============================================
-       ~NotifieeConst();
-      virtual void notifierIs(const Location::PtrConst& _notifier);
-      void isNonReferencingIs(bool _isNonReferencing);
-      virtual void onLocationNew( Location::Ptr ) {};
-      virtual void onLocationDel( Location::Ptr ) {};
-      void lrNextIs(NotifieeConst * _lrNext) {
-         lrNext_ = _lrNext;
-      }
-      static NotifieeConst::Ptr NotifieeConstIs() {
-         Ptr m = new NotifieeConst();
-         m->referencesDec(1);
-         // decr. refer count to compensate for initial val of 1
-         return m;
-      }
-      // Constructors ====================================================
+  static Location::Ptr LocationIs(string name) {
+     Ptr loc = new Location(name);
+     return loc;
+  }
+
+  class Notifiee : public Fwk::PtrInterface<Location> {
+  public:
+    typedef Fwk::Ptr<Notifiee> Ptr;
+
+    Location::Ptr notifier() const { return notifier_; }
+    virtual void notifierIs(const Location::Ptr& _notifier);
+
+    // Events
+    virtual void onSegment(Fwk::Ptr<Segment> seg) {};
+
+
+    static Notifiee::Ptr notifieeIs() {
+       Ptr m = new Notifiee();
+       return m;
+    }
+
+    ~Notifiee();
+
    protected:
-      Location::PtrConst notifier_;
-      bool isNonReferencing_;
-      NotifieeConst * lrNext_;
-      NotifieeConst(): Fwk::NamedInterface::NotifieeConst(),
-            isNonReferencing_(false),
-            lrNext_(0) {}
+    Notifiee() {}
+    Location::Ptr notifier_;
    };
 
-   class Notifiee : public virtual NotifieeConst, public virtual Fwk::NamedInterface::Notifiee {
-   public:
-      typedef Fwk::Ptr<Notifiee const> PtrConst;
-      typedef Fwk::Ptr<Notifiee> Ptr;
-      Location::PtrConst notifier() const { return NotifieeConst::notifier(); }
-      Location::Ptr notifier() { return const_cast<Location *>(NotifieeConst::notifier().ptr()); }
-      // Non-const interface =============================================
-      static Notifiee::Ptr NotifieeIs() {
-         Ptr m = new Notifiee();
-         m->referencesDec(1);
-         // decr. refer count to compensate for initial val of 1
-         return m;
-      }
-      // Constructors ====================================================
-   protected:
-      Notifiee(): Fwk::NamedInterface::Notifiee() {}
-   };
-	
-	Segment segment(unsigned index) const;
+  void segmentIs(Segment *seg); //use a weak pointer to avoid circular references
+	uint32_t segments() const;
+	SegmentIterator segmentIterator() { return segment_.begin(); };
+
+	void notifieeNew(Notifiee *n);
+	void notifieeDel(Notifiee *n);
 
 protected:
-	vector<Segment> segments_;
+	 Location(string name) : name_(name) {};
+	 string name_;
+   vector<Notifiee *> notifiee_;
+   vector<Fwk::Ptr<Segment> > segment_;
 
 //subscribe to notifications from segments that are added to it.
 };
@@ -108,68 +108,17 @@ class BoatTerminal : Terminal {};
 
 class PlaneTerminal : Terminal {};
 
-class Segment : public Fwk::NamedInterface
+class Segment : public Fwk::PtrInterface<Location>
 {
 
 public:
 
-	typedef Fwk::Ptr<Segment const> PtrConst;
   typedef Fwk::Ptr<Segment> Ptr;
 
-	class NotifieeConst : public virtual Fwk::NamedInterface::NotifieeConst {
-   public:
-      typedef Fwk::Ptr<NotifieeConst const> PtrConst;
-      typedef Fwk::Ptr<NotifieeConst> Ptr;
-      Fwk::String name() const { return (notifier_?notifier_->name():Fwk::String()); }
-      Segment::PtrConst notifier() const { return notifier_; }
-      bool isNonReferencing() const { return isNonReferencing_; }
-      NotifieeConst const * lrNext() const { return lrNext_; }
-      NotifieeConst * lrNext() { return lrNext_; }
-      // Non-const interface =============================================
-       ~NotifieeConst();
-      virtual void notifierIs(const Segment::PtrConst& _notifier);
-      void isNonReferencingIs(bool _isNonReferencing);
-      virtual void onSegmentNew( Segment::Ptr ) {};
-      virtual void onSegmentDel ( Segment::Ptr ) {}; 
-      virtual void onExpedite ( Segment::Ptr ) {};
-      void lrNextIs(NotifieeConst * _lrNext) {
-         lrNext_ = _lrNext;
-      }
-      static NotifieeConst::Ptr NotifieeConstIs() {
-         Ptr m = new NotifieeConst();
-         m->referencesDec(1);
-         // decr. refer count to compensate for initial val of 1
-         return m;
-      }
-      // Constructors ====================================================
-   protected:
-      Segment::PtrConst notifier_;
-      bool isNonReferencing_;
-      NotifieeConst * lrNext_;
-      NotifieeConst(): Fwk::NamedInterface::NotifieeConst(),
-            isNonReferencing_(false),
-            lrNext_(0) {}
-   };
-
-   class Notifiee : public virtual NotifieeConst, public virtual Fwk::NamedInterface::Notifiee {
-   public:
-      typedef Fwk::Ptr<Notifiee const> PtrConst;
-      typedef Fwk::Ptr<Notifiee> Ptr;
-      Segment::PtrConst notifier() const { return NotifieeConst::notifier(); }
-      Segment::Ptr notifier() { return const_cast<Segment *>(NotifieeConst::notifier().ptr()); }
-      // Non-const interface =============================================
-      static Notifiee::Ptr NotifieeIs() {
-         Ptr m = new Notifiee();
-         m->referencesDec(1);
-         // decr. refer count to compensate for initial val of 1
-         return m;
-      }
-      // Constructors ====================================================
-   protected:
-      Notifiee(): Fwk::NamedInterface::Notifiee() {}
-   };
-
-	class PackageCapacity : Ordinal<Miles, unsigned int> {};
+	class PackageCapacity : Ordinal<PackageCapacity, unsigned int> {
+	public:
+		PackageCapacity(unsigned int _capacity) : Ordinal<PackageCapacity, unsigned int>(_capacity) {}
+	};
 
 	class DifficultyLevel : Ordinal<DifficultyLevel, float> 
 	{
@@ -186,14 +135,16 @@ public:
 		ExpediteSupported
 	};
 
+	Segment();
+
 	Location source() const;
-	void sourceIs(Location loc);
+	// void sourceIs(Location loc);
 
 	Miles length() const;
 	void lengthIs(Miles miles);
 
 	Segment destination() const;
-	void destinationIs(Segment seg);
+	// void destinationIs(Segment seg);
 
 	DifficultyLevel difficulty() const;
 	void difficultyIs(DifficultyLevel dif);
@@ -202,13 +153,12 @@ public:
 	void expediteIs(ExpediteOptions exp_opt);
 
 protected:
+	Fwk::Ptr<Location> source_;
+	Fwk::Ptr<Location> destination_;
 	Minutes time_;
 	Dollars cost_;
-	PackageCapacity capcity_;
-
+	PackageCapacity capacity_;
 	Miles length_;
-	Location source_;
-	Location destination_;
 	DifficultyLevel difficulty_;
 	ExpediteOptions expedite_;
 
@@ -227,65 +177,11 @@ class Stats {};
 
 class Connectivity {};
 
-class Fleet : public Fwk::NamedInterface {
+class Fleet {
 
 public:
 
-	typedef Fwk::Ptr<Fleet const> PtrConst;
-  typedef Fwk::Ptr<Fleet> Ptr;
-
-	class NotifieeConst : public virtual Fwk::NamedInterface::NotifieeConst {
-   public:
-      typedef Fwk::Ptr<NotifieeConst const> PtrConst;
-      typedef Fwk::Ptr<NotifieeConst> Ptr;
-      Fwk::String name() const { return (notifier_?notifier_->name():Fwk::String()); }
-      Fleet::PtrConst notifier() const { return notifier_; }
-      bool isNonReferencing() const { return isNonReferencing_; }
-      NotifieeConst const * lrNext() const { return lrNext_; }
-      NotifieeConst * lrNext() { return lrNext_; }
-      // Non-const interface =============================================
-       ~NotifieeConst();
-      virtual void notifierIs(const Fleet::PtrConst& _notifier);
-      void isNonReferencingIs(bool _isNonReferencing);
-      virtual void onSpeed( Fleet::Ptr ) {};
-      virtual void onCapacity( Fleet::Ptr ) {};
-      virtual void onCostPerMile ( Fleet::Ptr ) {};
-      void lrNextIs(NotifieeConst * _lrNext) {
-         lrNext_ = _lrNext;
-      }
-      static NotifieeConst::Ptr NotifieeConstIs() {
-         Ptr m = new NotifieeConst();
-         m->referencesDec(1);
-         // decr. refer count to compensate for initial val of 1
-         return m;
-      }
-      // Constructors ====================================================
-   protected:
-      Fleet::PtrConst notifier_;
-      bool isNonReferencing_;
-      NotifieeConst * lrNext_;
-      NotifieeConst(): Fwk::NamedInterface::NotifieeConst(),
-            isNonReferencing_(false),
-            lrNext_(0) {}
-   };
-
-   class Notifiee : public virtual NotifieeConst, public virtual Fwk::NamedInterface::Notifiee {
-   public:
-      typedef Fwk::Ptr<Notifiee const> PtrConst;
-      typedef Fwk::Ptr<Notifiee> Ptr;
-      Fleet::PtrConst notifier() const { return NotifieeConst::notifier(); }
-      Fleet::Ptr notifier() { return const_cast<Fleet *>(NotifieeConst::notifier().ptr()); }
-      // Non-const interface =============================================
-      static Notifiee::Ptr NotifieeIs() {
-         Ptr m = new Notifiee();
-         m->referencesDec(1);
-         // decr. refer count to compensate for initial val of 1
-         return m;
-      }
-      // Constructors ====================================================
-   protected:
-      Notifiee(): Fwk::NamedInterface::Notifiee() {}
-   };
+   typedef Fwk::Ptr<Fleet> Ptr;
 
 	MilesPerHour speed() const;
 	void speed(MilesPerHour _speed);
@@ -296,7 +192,7 @@ public:
 	Dollars costPerMile() const;
 	void costPerMile(Dollars _costPerMile);
 
-private:
+protected:
 
 	MilesPerHour speed_;
 	Segment::PackageCapacity capacity_;
