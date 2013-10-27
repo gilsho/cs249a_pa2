@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <cmath>
 #include <stdint.h>
 #include "PtrInterface.h"
 #include "Ptr.h"
@@ -26,21 +27,35 @@ namespace Shipping {
 class Minutes : Ordinal<Minutes, unsigned int> {
 public:
 	Minutes(unsigned int _minutes) : Ordinal<Minutes, unsigned int>(_minutes) {}
+
+	bool operator==(const Minutes& v) const
+	{ return Nominal::value_ == v.value_; }
 };
 
 class Miles : Ordinal<Miles, unsigned int> {
 public:
 	Miles(unsigned int _miles) : Ordinal<Miles, unsigned int>(_miles) {}
+
+	bool operator==(const Miles& v) const
+	{ return Nominal::value_ == v.value_; }
+
 };
 
 class Dollars : Ordinal<Dollars, float> {
 public:
 	Dollars(float _dollars) : Ordinal<Dollars, float>(_dollars) {}
+		
+	bool operator==(const Dollars& v) const
+	{ return std::abs(Nominal::value_ - v.value_) < 1e-2; }
+
 };
 
 class MilesPerHour : Ordinal<MilesPerHour, float> {
 public:
 	MilesPerHour(float _milesPerHour) : Ordinal<MilesPerHour, float>(_milesPerHour) {}
+
+	bool operator==(const MilesPerHour& v) const
+	{ return std::abs(Nominal::value_ - v.value_) < 1e-2; }
 };
 
 
@@ -112,6 +127,9 @@ public:
 	class PackageCapacity : Ordinal<PackageCapacity, unsigned int> {
 	public:
 		PackageCapacity(unsigned int _capacity) : Ordinal<PackageCapacity, unsigned int>(_capacity) {}
+
+		bool operator==(const PackageCapacity& v) const
+		{ return Nominal::value_ == v.value_; }
 	};
 
 	class DifficultyLevel : Ordinal<DifficultyLevel, float> 
@@ -122,6 +140,9 @@ public:
 				throw "illegal difficulty value";
 			}
 		}
+
+		bool operator==(const DifficultyLevel& v) const
+		{ return std::abs(Nominal::value_ - v.value_) < 1e-2; }
 	};
 
 	enum ExpediteOptions {
@@ -242,26 +263,64 @@ protected:
 };
 
 
-class Fleet {
+class Fleet : public Fwk::PtrInterface<Fleet> {
 
 public:
 
-   typedef Fwk::Ptr<Fleet> Ptr;
+	class Notifiee;
 
-	MilesPerHour speed() const;
-	void speed(MilesPerHour _speed);
+  typedef Fwk::Ptr<Fleet> Ptr;
+  typedef vector<Notifiee *>::iterator NotifieeIterator;
 
-	Segment::PackageCapacity capcity() const;
-	void capcityIs(Segment::PackageCapacity _capacity);
+  static Fleet::Ptr FleetIs(string name) {
+     Ptr fleet = new Fleet(name);
+     return fleet;
+  }
 
-	Dollars costPerMile() const;
-	void costPerMile(Dollars _costPerMile);
+  class Notifiee : public Fwk::PtrInterface<Notifiee> {
+  public:
+    typedef Fwk::Ptr<Notifiee> Ptr;
+
+    Fleet::Ptr notifier() const { return notifier_; }
+    virtual void notifierIs(const Fleet::Ptr& _notifier);
+
+    // Events
+    virtual void onSpeed() {};
+    virtual void onCapacity() {};
+    virtual void onCostPerMile() {};
+
+
+    static Notifiee::Ptr notifieeIs() {
+       Ptr m = new Notifiee();
+       return m;
+    }
+
+    ~Notifiee();
+
+   protected:
+    Notifiee() {}
+    Fleet::Ptr notifier_;
+   };
+
+	void notifieeNew(Notifiee *n);
+	void notifieeDel(Notifiee *n);
+
+	MilesPerHour speed() const { return speed_; }
+	void speedIs(MilesPerHour _speed);
+
+	Segment::PackageCapacity capacity() const { return capacity_; }
+	void capacityIs(Segment::PackageCapacity _capacity);
+
+	Dollars costPerMile() const { return costPerMile_; }
+	void costPerMileIs(Dollars _costPerMile);
 
 protected:
-
+	Fleet(string name) : name_(name), speed_(0), capacity_(0), costPerMile_(0) {}
+	string name_;
 	MilesPerHour speed_;
 	Segment::PackageCapacity capacity_;
 	Dollars costPerMile_;
+	vector<Notifiee *> notifiee_;
 
 
 };
