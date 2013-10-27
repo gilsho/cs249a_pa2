@@ -1,0 +1,6 @@
+1. Add notifications to expedite options of Segment class
+2. Enforce correct endpoint locations for different types of segments
+3. Hookup locations and segments correctly in the Network class (adding a segment to the network should add the segment to its two endpoints as well)
+4. create path class
+5. connectivity - breadth first search, etc.
+6. create rep layer.
