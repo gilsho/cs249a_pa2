@@ -58,6 +58,13 @@ public:
 	{ return std::abs(Nominal::value_ - v.value_) < 1e-2; }
 };
 
+class PackageCapacity : Ordinal<PackageCapacity, unsigned int> {
+public:
+	PackageCapacity(unsigned int _capacity) : Ordinal<PackageCapacity, unsigned int>(_capacity) {}
+
+	bool operator==(const PackageCapacity& v) const
+	{ return Nominal::value_ == v.value_; }
+};
 
 class Segment;
 
@@ -87,50 +94,118 @@ protected:
 //subscribe to notifications from segments that are added to it.
 };
 
-class CustomerLocation : Location {
+class CustomerLocation : public Location {
 public:
 	typedef Fwk::Ptr<CustomerLocation> Ptr;
+
+	static Ptr CustomerLocationIs(string name) {
+		Ptr loc = new CustomerLocation(name);
+		return loc;
+	} 
+
+protected:
+	CustomerLocation(string name) : Location(name) {}
 };
 
-class Terminal : Location {
+class Terminal : public Location {
 public:	
 	typedef Fwk::Ptr<Terminal> Ptr;
+
+	static Ptr TerminalIs(string name) {
+		Ptr term = new Terminal(name);
+		return term;
+	}
+
+protected:
+	Terminal(string name) : Location(name) {}
 };
 
-class Port : Location {
+class Port : public Location {
 public:
 	typedef Fwk::Ptr<Port> Ptr;
+
+	static Ptr PortIs(string name) {
+		Ptr port = new Port(name);
+		return port;
+	}
+
+protected:
+	Port(string name) : Location(name) {}
 };
 
-class TruckTerminal : Terminal {
+class TruckTerminal : public Terminal {
 public:
 	typedef Fwk::Ptr<TruckTerminal> Ptr;
+
+	static Ptr TruckTerminalIs(string name) {
+		Ptr term = new TruckTerminal(name);
+		return term;
+	}
+
+protected:
+	TruckTerminal(string name) : Terminal(name) {}
 };
 
-class BoatTerminal : Terminal {
+class BoatTerminal : public Terminal {
 public:
 	typedef Fwk::Ptr<BoatTerminal> Ptr;
+
+	static Ptr BoatTerminalIs(string name) {
+		Ptr term = new BoatTerminal(name);
+		return term;
+	}
+
+protected:
+	BoatTerminal(string name) : Terminal(name) {}
 };
 
-class PlaneTerminal : Terminal {
+class PlaneTerminal : public Terminal {
 public:
 	typedef Fwk::Ptr<PlaneTerminal> Ptr;
+
+	static Ptr PlaneTerminalIs(string name) {
+		Ptr term = new PlaneTerminal(name);
+		return term;
+	}
+
+protected:
+	PlaneTerminal(string name) : Terminal(name) {}
 };
 
-class Segment : public Fwk::PtrInterface<Location>
+
+class Segment : public Fwk::PtrInterface<Segment>
 {
 
 public:
 
+	class Notifiee;
+  
   typedef Fwk::Ptr<Segment> Ptr;
+  typedef vector<Notifiee *>::iterator NotifieeIterator;
 
-	class PackageCapacity : Ordinal<PackageCapacity, unsigned int> {
-	public:
-		PackageCapacity(unsigned int _capacity) : Ordinal<PackageCapacity, unsigned int>(_capacity) {}
 
-		bool operator==(const PackageCapacity& v) const
-		{ return Nominal::value_ == v.value_; }
-	};
+  class Notifiee : public Fwk::PtrInterface<Notifiee> {
+  public:
+    typedef Fwk::Ptr<Notifiee> Ptr;
+
+    Segment::Ptr notifier() const { return notifier_; }
+    virtual void notifierIs(const Segment::Ptr _notifier);
+
+    // Events
+    virtual void onExpedite() {};
+
+    static Notifiee::Ptr NotifieeIs() {
+       Ptr m = new Notifiee();
+       return m;
+    }
+
+    ~Notifiee() {}
+
+   protected:
+    Notifiee() {}
+    Segment::Ptr notifier_;
+
+   };
 
 	class DifficultyLevel : Ordinal<DifficultyLevel, float> 
 	{
@@ -150,8 +225,8 @@ public:
 		ExpediteSupported
 	};
 
-  static Segment::Ptr SegmentIs(string name, Location::Ptr& _source, 
-  															Location::Ptr& _destination) {
+  static Segment::Ptr SegmentIs(string name, Location::Ptr _source, 
+  															Location::Ptr _destination) {
   	Ptr m = new Segment(name);
   	return m;
   };
@@ -159,20 +234,23 @@ public:
 	string name() const { return name_; }
 	void nameIs(string name) { name_ = name;}
 
-	Location source() const;
+	Location::Ptr source() const { return source_; }
 	// void sourceIs(Location loc);
 
-	Miles length() const;
+	Miles length() const { return length_; }
 	void lengthIs(Miles miles);
 
-	Segment destination() const;
+	Location::Ptr destination() const { return destination_; }
 	// void destinationIs(Segment seg);
 
-	DifficultyLevel difficulty() const;
+	DifficultyLevel difficulty() const { return difficulty_; }
 	void difficultyIs(DifficultyLevel dif);
 
-	ExpediteOptions expedite() const;
-	void expediteIs(ExpediteOptions exp_opt);
+	ExpediteOptions expedite() const { return expedite_; }
+	void expediteIs(ExpediteOptions _expedite);
+
+	void notifieeNew(Notifiee *n);
+	void notifieeDel(Notifiee *n);
 
 protected:
 	Segment(string name);
@@ -181,15 +259,26 @@ protected:
 	Fwk::Ptr<Location> destination_;
 	Minutes time_;
 	Dollars cost_;
-	PackageCapacity capacity_;
 	Miles length_;
 	DifficultyLevel difficulty_;
 	ExpediteOptions expedite_;
+	vector<Notifiee *> notifiee_;
 
 };
 
-class BoatSegment : Segment {
+class BoatSegment : public Segment {
 public:
+	typedef Fwk::Ptr<BoatSegment> Ptr;
+
+	static Ptr BoatSegmentIs(string name) {
+		Ptr seg = new BoatSegment(name);
+		return seg;
+	}
+
+protected:
+	BoatSegment(string name) : Segment(name) {}
+
+
 	// BoatSegment(Location::Ptr& _source, Location::Ptr& _destination) {
 	// 	if (INSTANCE_OF	(_source.ptr(), TruckTerminal*) ||
 	// 		  INSTANCE_OF(_source.ptr(), PlaneTerminal*) ||
@@ -201,10 +290,32 @@ public:
 };
 //subscribe to notifications from fleet object
 
-class PlaneSegment : Segment {};
+class PlaneSegment : public Segment {
+public:
+	typedef Fwk::Ptr<PlaneSegment> Ptr;
+
+	static Ptr PlaneSegmentIs(string name) {
+		Ptr seg = new PlaneSegment(name);
+		return seg;
+	}
+
+protected:
+	PlaneSegment(string name) : Segment(name) {}
+};
 //subscribe to notifications from fleet object
 
-class TruckSegment : Segment {};
+class TruckSegment : public Segment {
+public:
+	typedef Fwk::Ptr<TruckSegment> Ptr;
+
+	static Ptr TruckSegmentIs(string name) {
+		Ptr seg = new TruckSegment(name);
+		return seg;
+	}
+
+protected:
+	TruckSegment(string name) : Segment(name) {}
+};
 //subscribe to notifications from 
 
 class Network : public Fwk::PtrInterface<Network> {
@@ -217,10 +328,10 @@ public:
 
 
 	Location::Ptr location(string name);
-	void locationIs(Location::Ptr& loc);
+	void locationIs(Location::Ptr loc);
 
 	Segment::Ptr segment(string name);
-	void segmentIs(Segment::Ptr& seg);
+	void segmentIs(Segment::Ptr seg);
 
   static Network::Ptr NetworkIs(string name) {
      Ptr net = new Network(name);
@@ -232,14 +343,14 @@ public:
     typedef Fwk::Ptr<Notifiee> Ptr;
 
     Network::Ptr notifier() const { return notifier_; }
-    virtual void notifierIs(const Network::Ptr& _notifier);
+    virtual void notifierIs(const Network::Ptr _notifier);
 
     // Events
     virtual void onLocationNew(Location::Ptr loc) {};
     virtual void onSegmentNew(Segment::Ptr seg) {};
 
 
-    static Notifiee::Ptr notifieeIs() {
+    static Notifiee::Ptr NotifieeIs() {
        Ptr m = new Notifiee();
        return m;
     }
@@ -282,7 +393,7 @@ public:
     typedef Fwk::Ptr<Notifiee> Ptr;
 
     Fleet::Ptr notifier() const { return notifier_; }
-    virtual void notifierIs(const Fleet::Ptr& _notifier);
+    virtual void notifierIs(const Fleet::Ptr _notifier);
 
     // Events
     virtual void onSpeed() {};
@@ -308,8 +419,8 @@ public:
 	MilesPerHour speed() const { return speed_; }
 	void speedIs(MilesPerHour _speed);
 
-	Segment::PackageCapacity capacity() const { return capacity_; }
-	void capacityIs(Segment::PackageCapacity _capacity);
+	PackageCapacity capacity() const { return capacity_; }
+	void capacityIs(PackageCapacity _capacity);
 
 	Dollars costPerMile() const { return costPerMile_; }
 	void costPerMileIs(Dollars _costPerMile);
@@ -318,7 +429,7 @@ protected:
 	Fleet(string name) : name_(name), speed_(0), capacity_(0), costPerMile_(0) {}
 	string name_;
 	MilesPerHour speed_;
-	Segment::PackageCapacity capacity_;
+	PackageCapacity capacity_;
 	Dollars costPerMile_;
 	vector<Notifiee *> notifiee_;
 
@@ -333,10 +444,107 @@ class TruckFleet : Fleet {};
 
 class Path {};
 
-class Stats {};
+class Stats : public Fwk::PtrInterface<Stats> {
+public:
+	typedef Fwk::Ptr<Stats> Ptr;
+	typedef uint32_t EntityCount;	
+
+	inline Network::Ptr network() { return network_; } 
+	inline EntityCount customerLocations() { return customer_locations_; }
+	inline EntityCount ports() { return ports_; }
+	inline EntityCount truckTerminals() { return truck_terminals_; }
+	inline EntityCount boatTerminals() { return boat_terminals_; }
+	inline EntityCount planeTerminals() { return plane_terminals_; }
+	inline EntityCount truckSegments() { return truck_segments_; }
+	inline EntityCount boatSegments() { return boat_segments_; }
+	inline EntityCount planeSegments() { return plane_segments_; }
+	inline EntityCount expedited() { return expedited_; }
+
+protected:
+	Network::Ptr network_;
+	EntityCount customer_locations_;
+	EntityCount ports_;
+	EntityCount truck_terminals_;
+	EntityCount boat_terminals_;
+	EntityCount plane_terminals_;
+	EntityCount truck_segments_;
+	EntityCount boat_segments_;
+	EntityCount plane_segments_;
+	EntityCount expedited_;
+};
+
+class StatsConfig : public Stats {
+
+public:
+
+	typedef Fwk::Ptr<StatsConfig> Ptr;
+
+	static Ptr StatsConfigIs(Network::Ptr _network) {
+		Ptr stats = new StatsConfig(_network);
+		return stats;
+	}
+
+	class SegmentReactor : public Segment::Notifiee {
+	public:
+		typedef Fwk::Ptr<StatsConfig::SegmentReactor> Ptr;
+
+		static Ptr ReactorIs(StatsConfig *s) {
+			Ptr m = new SegmentReactor(s);
+			return m;
+		}
+
+		void onExpedite();
+
+	protected:
+		SegmentReactor(StatsConfig *s) : owner_(s) {}
+		StatsConfig *owner_;
+		Segment::ExpediteOptions oldval;
+	};
+
+	typedef vector<SegmentReactor::Ptr >::iterator SegmentReactorIterator;
+	
+	void segmentReactorNew(Segment::Ptr);
+
+	void customerLocationsIs(Stats::EntityCount _customer_locations);
+	void portsIs(Stats::EntityCount _ports);
+	void truckTerminalsIs(Stats::EntityCount _truck_terminals);
+	void boatTerminalsIs(Stats::EntityCount _boat_terminals);
+	void planeTerminalsIs(Stats::EntityCount _plane_terminals);
+	void truckSegmentsIs(Stats::EntityCount _truck_segments);
+	void boatSegmentsIs(Stats::EntityCount _boat_segments);
+	void planeSegmentsIs(Stats::EntityCount _plane_segments);
+	void expeditedIs(Stats::EntityCount _expedited);
+
+protected:
+	StatsConfig(Network::Ptr _network);
+
+	class NetworkReactor : public Network::Notifiee {
+	public:
+		typedef Fwk::Ptr<StatsConfig::NetworkReactor> Ptr;
+
+		static Ptr ReactorIs(StatsConfig *s) {
+			Ptr m = new NetworkReactor(s);
+			return m;
+		}
+
+		void onSegmentNew(Segment::Ptr seg);
+		void onLocationNew(Location::Ptr loc);
+
+		void onSegmentDel(Segment::Ptr seg);
+		void onLocationDel(Location::Ptr loc);
+
+	protected:
+		NetworkReactor(StatsConfig *s) : owner_(s) {}
+		StatsConfig *owner_;
+	};
+
+
+	NetworkReactor::Ptr net_reactor_;
+	vector<SegmentReactor::Ptr> seg_reactor_;
+
+};
 
 class Connectivity {};
-
 
 
 } /* end namespace */
