@@ -1,6 +1,9 @@
 
 #include "Engine.h"
 
+using std::cout;
+using std::endl;
+
 namespace Shipping {
 
 
@@ -63,6 +66,11 @@ void Segment::Notifiee::notifierIs(const Segment::Ptr _notifier) {
 	// segment_.push_back(p);
 	*/
 
+Segment::Ptr Network::segment(string name) {
+	if (segments_.find(name) == segments_.end())
+		return NULL;
+	return segments_[name];
+}
 
 void Network::segmentIs(Segment::Ptr seg) {
 	// make operation idempotent
@@ -79,6 +87,26 @@ void Network::segmentIs(Segment::Ptr seg) {
 	}
 }
 
+void Network::segmentDel(string name) {
+	if (segments_.find(name) == segments_.end()) return;
+	map<string, Segment::Ptr>::iterator itseg = segments_.find(name);
+	segments_.erase(itseg);
+
+	// notification
+	for (NotifieeIterator it = notifiee_.begin();
+			 it != notifiee_.end();
+			 ++it) {
+		(*it)->onSegmentDel(itseg->second);
+	}
+}
+
+
+Location::Ptr Network::location(string name) {
+	if (locations_.find(name) == locations_.end())
+		return NULL;
+	return locations_[name];
+}
+
 void Network::locationIs(Location::Ptr loc) {
 	// make operation idempotent
 	if (locations_.find(loc->name()) != locations_.end())
@@ -91,6 +119,19 @@ void Network::locationIs(Location::Ptr loc) {
 			 it != notifiee_.end();
 			 ++it) {
 		(*it)->onLocationNew(loc);
+	}
+}
+
+void Network::locationDel(string name) {
+	if (locations_.find(name) == locations_.end()) return;
+	map<string, Location::Ptr>::iterator itseg = locations_.find(name);
+	locations_.erase(itseg);
+
+	// notification
+	for (NotifieeIterator it = notifiee_.begin();
+			 it != notifiee_.end();
+			 ++it) {
+		(*it)->onLocationDel(itseg->second);
 	}
 }
 
@@ -235,6 +276,19 @@ void StatsConfig::NetworkReactor::onSegmentNew(Segment::Ptr seg) {
 	owner_->segmentReactorNew(seg);
 }
 
+void StatsConfig::NetworkReactor::onSegmentDel(Segment::Ptr seg) {
+	if (INSTANCE_OF(seg.ptr(), BoatSegment*)) {
+		owner_->boatSegmentsIs(owner_->boatSegments() - 1);
+	} else if (INSTANCE_OF(seg.ptr(), PlaneSegment*)) {
+		owner_->planeSegmentsIs(owner_->planeSegments() - 1); 
+	} else if (INSTANCE_OF(seg.ptr(), TruckSegment*)) {
+		owner_->truckSegmentsIs(owner_->truckSegments() - 1);
+	} else {
+		// invalid segment. do nothing
+	}
+	owner_->segmentReactorNew(seg);
+}
+
 void StatsConfig::NetworkReactor::onLocationNew(Location::Ptr loc) {
 	if (INSTANCE_OF(loc.ptr(), CustomerLocation*)) {
 		owner_->customerLocationsIs(1 + owner_->customerLocations());
@@ -246,6 +300,20 @@ void StatsConfig::NetworkReactor::onLocationNew(Location::Ptr loc) {
 		owner_->boatTerminalsIs(1 + owner_->boatTerminals());
 	} else if (INSTANCE_OF(loc.ptr(), PlaneTerminal*)) {
 		owner_->planeTerminalsIs(1 + owner_->planeTerminals());
+	}
+}
+
+void StatsConfig::NetworkReactor::onLocationDel(Location::Ptr loc) {
+	if (INSTANCE_OF(loc.ptr(), CustomerLocation*)) {
+		owner_->customerLocationsIs(owner_->customerLocations() - 1);
+	} else if (INSTANCE_OF(loc.ptr(), Port*)) {
+		owner_->portsIs(owner_->ports() - 1);
+	} else if (INSTANCE_OF(loc.ptr(), TruckTerminal*)) {
+		owner_->truckTerminalsIs(owner_->truckTerminals() - 1);
+	} else if (INSTANCE_OF(loc.ptr(), BoatTerminal*)) {
+		owner_->boatTerminalsIs(owner_->boatTerminals() - 1);
+	} else if (INSTANCE_OF(loc.ptr(), PlaneTerminal*)) {
+		owner_->planeTerminalsIs(owner_->planeTerminals() - 1);
 	}
 }
 

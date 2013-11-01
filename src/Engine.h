@@ -329,9 +329,11 @@ public:
 
 	Location::Ptr location(string name);
 	void locationIs(Location::Ptr loc);
+	void locationDel(string name);
 
 	Segment::Ptr segment(string name);
 	void segmentIs(Segment::Ptr seg);
+	void segmentDel(string name);
 
   static Network::Ptr NetworkIs(string name) {
      Ptr net = new Network(name);
@@ -347,7 +349,10 @@ public:
 
     // Events
     virtual void onLocationNew(Location::Ptr loc) {};
+    virtual void onLocationDel(Location::Ptr loc) {};
+
     virtual void onSegmentNew(Segment::Ptr seg) {};
+    virtual void onSegmentDel(Segment::Ptr seg) {};
 
 
     static Notifiee::Ptr NotifieeIs() {
@@ -528,9 +533,9 @@ protected:
 		}
 
 		void onSegmentNew(Segment::Ptr seg);
-		void onLocationNew(Location::Ptr loc);
-
 		void onSegmentDel(Segment::Ptr seg);
+		
+		void onLocationNew(Location::Ptr loc);
 		void onLocationDel(Location::Ptr loc);
 
 	protected:
