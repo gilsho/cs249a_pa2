@@ -199,7 +199,7 @@ public:
        return m;
     }
 
-    ~Notifiee() {}
+    ~Notifiee();
 
    protected:
     Notifiee() {}
@@ -383,43 +383,12 @@ class Fleet : public Fwk::PtrInterface<Fleet> {
 
 public:
 
-	class Notifiee;
-
   typedef Fwk::Ptr<Fleet> Ptr;
-  typedef vector<Notifiee *>::iterator NotifieeIterator;
 
   static Fleet::Ptr FleetIs(string name) {
      Ptr fleet = new Fleet(name);
      return fleet;
   }
-
-  class Notifiee : public Fwk::PtrInterface<Notifiee> {
-  public:
-    typedef Fwk::Ptr<Notifiee> Ptr;
-
-    Fleet::Ptr notifier() const { return notifier_; }
-    virtual void notifierIs(const Fleet::Ptr _notifier);
-
-    // Events
-    virtual void onSpeed() {};
-    virtual void onCapacity() {};
-    virtual void onCostPerMile() {};
-
-
-    static Notifiee::Ptr notifieeIs() {
-       Ptr m = new Notifiee();
-       return m;
-    }
-
-    ~Notifiee();
-
-   protected:
-    Notifiee() {}
-    Fleet::Ptr notifier_;
-   };
-
-	void notifieeNew(Notifiee *n);
-	void notifieeDel(Notifiee *n);
 
 	MilesPerHour speed() const { return speed_; }
 	void speedIs(MilesPerHour _speed);
@@ -436,8 +405,6 @@ protected:
 	MilesPerHour speed_;
 	PackageCapacity capacity_;
 	Dollars costPerMile_;
-	vector<Notifiee *> notifiee_;
-
 
 };
 
