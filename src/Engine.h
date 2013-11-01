@@ -257,8 +257,6 @@ protected:
 	string name_;
 	Fwk::Ptr<Location> source_;
 	Fwk::Ptr<Location> destination_;
-	Minutes time_;
-	Dollars cost_;
 	Miles length_;
 	DifficultyLevel difficulty_;
 	ExpediteOptions expedite_;
@@ -316,7 +314,77 @@ public:
 protected:
 	TruckSegment(string name) : Segment(name) {}
 };
-//subscribe to notifications from 
+
+
+class FleetDesc : public Fwk::PtrInterface<FleetDesc> {
+
+public:
+
+  typedef Fwk::Ptr<FleetDesc> Ptr;
+
+  static FleetDesc::Ptr FleetDescIs() {
+     Ptr fleet = new FleetDesc();
+     return fleet;
+  }
+
+	MilesPerHour speed() const { return speed_; }
+	void speedIs(MilesPerHour _speed);
+
+	PackageCapacity capacity() const { return capacity_; }
+	void capacityIs(PackageCapacity _capacity);
+
+	Dollars costPerMile() const { return costPerMile_; }
+	void costPerMileIs(Dollars _costPerMile);
+
+protected:
+	FleetDesc() : speed_(0), capacity_(0), costPerMile_(0) {}
+	string name_;
+	MilesPerHour speed_;
+	PackageCapacity capacity_;
+	Dollars costPerMile_;
+
+};
+
+class BoatFleetDesc : public FleetDesc {
+public:
+	typedef Fwk::Ptr<BoatFleetDesc> Ptr;
+
+  static BoatFleetDesc::Ptr BoatFleetDescIs() {
+     Ptr fleet = new BoatFleetDesc();
+     return fleet;
+  }
+
+protected:
+	BoatFleetDesc() : FleetDesc() {}
+};
+
+class PlaneFleetDesc : public FleetDesc {
+	public:
+	typedef Fwk::Ptr<PlaneFleetDesc> Ptr;
+
+  static PlaneFleetDesc::Ptr PlaneFleetDescIs() {
+     Ptr fleet = new PlaneFleetDesc();
+     return fleet;
+  }
+
+protected:
+	PlaneFleetDesc() : FleetDesc() {}
+};
+
+class TruckFleetDesc : public FleetDesc {
+	public:
+	typedef Fwk::Ptr<TruckFleetDesc> Ptr;
+
+  static TruckFleetDesc::Ptr TruckFleetDescIs() {
+     Ptr fleet = new TruckFleetDesc();
+     return fleet;
+  }
+
+protected:
+	TruckFleetDesc() : FleetDesc() {}
+};
+
+class Path {};
 
 class Network : public Fwk::PtrInterface<Network> {
 public:
@@ -373,48 +441,12 @@ public:
 protected:
 	Network(string name) : name_(name) {};
 	string name_;
-  vector<Notifiee *> notifiee_;
 	map<string, Location::Ptr> locations_;
 	map<string, Segment::Ptr> segments_;
-};
-
-
-class Fleet : public Fwk::PtrInterface<Fleet> {
-
-public:
-
-  typedef Fwk::Ptr<Fleet> Ptr;
-
-  static Fleet::Ptr FleetIs(string name) {
-     Ptr fleet = new Fleet(name);
-     return fleet;
-  }
-
-	MilesPerHour speed() const { return speed_; }
-	void speedIs(MilesPerHour _speed);
-
-	PackageCapacity capacity() const { return capacity_; }
-	void capacityIs(PackageCapacity _capacity);
-
-	Dollars costPerMile() const { return costPerMile_; }
-	void costPerMileIs(Dollars _costPerMile);
-
-protected:
-	Fleet(string name) : name_(name), speed_(0), capacity_(0), costPerMile_(0) {}
-	string name_;
-	MilesPerHour speed_;
-	PackageCapacity capacity_;
-	Dollars costPerMile_;
+  vector<Notifiee *> notifiee_;
+	
 
 };
-
-class BoatFleet : Fleet {};
-
-class PlaneFleet : Fleet {};
-
-class TruckFleet : Fleet {};
-
-class Path {};
 
 class Stats : public Fwk::PtrInterface<Stats> {
 public:

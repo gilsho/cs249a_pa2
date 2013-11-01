@@ -39,8 +39,7 @@ void Segment::expediteIs(ExpediteOptions _expedite) {
 	}
 }
 
-Segment::Segment(string name) : name_(name), time_(0), cost_(0), length_(0),
-										 difficulty_(1.0) {} 
+Segment::Segment(string name) : name_(name), length_(0), difficulty_(1.0) {} 
 
 
 void Segment::Notifiee::notifierIs(const Segment::Ptr _notifier) {
@@ -180,17 +179,17 @@ Network::Notifiee::~Notifiee() {
 }
 
 
-void Fleet::speedIs(MilesPerHour _speed){
+void FleetDesc::speedIs(MilesPerHour _speed){
 	if (speed_ == _speed) return;
 	speed_ = _speed;
 }
 
-void Fleet::capacityIs(PackageCapacity _capacity){
+void FleetDesc::capacityIs(PackageCapacity _capacity){
 	if (capacity_ == _capacity) return;
 	capacity_ = _capacity;
 }
 
-void Fleet::costPerMileIs(Dollars _costPerMile){
+void FleetDesc::costPerMileIs(Dollars _costPerMile){
 	if (costPerMile_ == _costPerMile) return;
 	costPerMile_ = _costPerMile;
 }
