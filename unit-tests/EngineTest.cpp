@@ -39,8 +39,8 @@ TEST(Network, NotifieeTest)
   Reactor * rec = new Reactor();
   rec->notifierIs(net);
 
-  Location::Ptr loc1 = Location::LocationIs("sf");
-  Location::Ptr loc2 = Location::LocationIs("paris");
+  Location::Ptr loc1 = Customer::CustomerIs("sf");
+  Location::Ptr loc2 = Customer::CustomerIs("paris");
   Segment::Ptr seg1 = TruckSegment::TruckSegmentIs("280");
   Segment::Ptr seg2 = TruckSegment::TruckSegmentIs("101");
 
@@ -128,18 +128,18 @@ TEST(Network, Fleet)
   net->planeFleetIs(p);
   net->truckFleetIs(t);
 
-  ASSERT_TRUE(net->fleet(Truck) == t);
-  ASSERT_TRUE(net->fleet(Boat) == b);
-  ASSERT_TRUE(net->fleet(Plane) == p);
+  ASSERT_TRUE(net->fleet(TruckMode) == t);
+  ASSERT_TRUE(net->fleet(BoatMode) == b);
+  ASSERT_TRUE(net->fleet(PlaneMode) == p);
 
-  ASSERT_TRUE(net->fleet(Truck) != b);
-  ASSERT_TRUE(net->fleet(Boat) != p);
-  ASSERT_TRUE(net->fleet(Plane) != t);
+  ASSERT_TRUE(net->fleet(TruckMode) != b);
+  ASSERT_TRUE(net->fleet(BoatMode) != p);
+  ASSERT_TRUE(net->fleet(PlaneMode) != t);
 }
 
 TEST(Engine, InstanceOf) 
 {
-  Location::Ptr loc = Location::LocationIs("sf");
+  Location::Ptr loc = Customer::CustomerIs("sf");
 
   ASSERT_TRUE(INSTANCE_OF(loc.ptr(), Location*));
   ASSERT_TRUE(!INSTANCE_OF(loc.ptr(), Segment*));
@@ -156,7 +156,7 @@ TEST(Stats, onLocationNew)
   ASSERT_TRUE(stats->planeSegments() == 0);
   ASSERT_TRUE(stats->boatSegments() == 0);
   
-  CustomerLocation::Ptr loc1 = CustomerLocation::CustomerLocationIs("cloc1");
+  Customer::Ptr loc1 = Customer::CustomerIs("cloc1");
   net->locationIs(loc1);
   ASSERT_TRUE(stats->customerLocations() == 1);
   ASSERT_TRUE(stats->ports() == 0);
@@ -164,7 +164,7 @@ TEST(Stats, onLocationNew)
   ASSERT_TRUE(stats->planeSegments() == 0);
   ASSERT_TRUE(stats->boatSegments() == 0);
 
-  CustomerLocation::Ptr loc2 = CustomerLocation::CustomerLocationIs("cloc2");
+  Customer::Ptr loc2 = Customer::CustomerIs("cloc2");
   net->locationIs(loc2);
   ASSERT_TRUE(stats->customerLocations() == 2);
   ASSERT_TRUE(stats->ports() == 0);
@@ -246,10 +246,10 @@ TEST(Stats, onLocationDel)
   Network::Ptr net = Network::NetworkIs("net"); 
   Stats::Ptr stats = StatsConfig::StatsConfigIs(net);
   
-  CustomerLocation::Ptr loc1 = CustomerLocation::CustomerLocationIs("cloc1");
+  Customer::Ptr loc1 = Customer::CustomerIs("cloc1");
   net->locationIs(loc1);
 
-  CustomerLocation::Ptr loc2 = CustomerLocation::CustomerLocationIs("cloc2");
+  Customer::Ptr loc2 = Customer::CustomerIs("cloc2");
   net->locationIs(loc2);
 
   Port::Ptr loc3 = Port::PortIs("ploc1");
@@ -330,8 +330,34 @@ TEST(FleetDesc, costPerMile)
   ASSERT_TRUE(fleet->costPerMile() == 210);
 }
 
+TEST(Path, segmentNew)
+{
+  Location::Ptr loc1 = Customer::CustomerIs("pa");
+  Location::Ptr loc2 = Port::PortIs("redwood");
+  Location::Ptr loc3 = BoatTerminal::BoatTerminalIs("sf");
 
-//test stats delete!!!
+  Segment::Ptr seg1 = TruckSegment::TruckSegmentIs("280");
+  seg1->sourceIs(loc1);
+  seg1->destinationIs(loc2);
+  seg1->difficultyIs(2.0);
+  seg1->lengthIs(15);
+
+  Segment::Ptr seg2 = BoatSegment::BoatSegmentIs("bay");
+  seg2->sourceIs(loc2);
+  seg2->destinationIs(loc3);
+  seg2->difficultyIs(3.0);
+  seg2->lengthIs(25);
+
+  Segment::Ptr seg3 = PlaneSegment::PlaneSegmentIs("skyline");
+  seg3->sourceIs(loc2);
+  seg3->destinationIs(loc1);
+}
+
+TEST(Path, ExpediteSupported) 
+{
+}
+
+
 
 
 

@@ -72,9 +72,17 @@ enum ExpediteOptions {
 };
 
 enum TransportationMode {
-	Truck,
-	Boat,
-	Plane
+	TruckMode,
+	BoatMode,
+	PlaneMode
+};
+
+enum LocationType {
+	CustomerLocation,
+	PortLocation,
+	TruckTerminalLocation,
+	BoatTerminalLocation,
+	PlaneTerminalLocation
 };
 
 class Segment;
@@ -85,11 +93,6 @@ public:
   typedef Fwk::Ptr<Location> Ptr;
   typedef vector<Fwk::Ptr<Segment> >::iterator SegmentIterator;
 
-  static Location::Ptr LocationIs(string name) {
-     Ptr loc = new Location(name);
-     return loc;
-  }
-
 	string name() const { return name_; }
 	void nameIs(string name) { name_ = name;}
 
@@ -97,38 +100,36 @@ public:
 	uint32_t segments() const;
 	SegmentIterator segmentIterator() { return segment_.begin(); };
 
+	LocationType type() const { return type_; }
+
 protected:
-	Location(string name) : name_(name) {};
+	Location(string name, LocationType type) : name_(name), type_(type) {};
 	string name_;
+	LocationType type_;
   vector<Fwk::Ptr<Segment> > segment_;
 
 //subscribe to notifications from segments that are added to it.
 };
 
-class CustomerLocation : public Location {
+class Customer : public Location {
 public:
-	typedef Fwk::Ptr<CustomerLocation> Ptr;
+	typedef Fwk::Ptr<Customer> Ptr;
 
-	static Ptr CustomerLocationIs(string name) {
-		Ptr loc = new CustomerLocation(name);
+	static Ptr CustomerIs(string name) {
+		Ptr loc = new Customer(name);
 		return loc;
 	} 
 
 protected:
-	CustomerLocation(string name) : Location(name) {}
+	Customer(string name) : Location(name, CustomerLocation) {}
 };
 
 class Terminal : public Location {
 public:	
 	typedef Fwk::Ptr<Terminal> Ptr;
 
-	static Ptr TerminalIs(string name) {
-		Ptr term = new Terminal(name);
-		return term;
-	}
-
 protected:
-	Terminal(string name) : Location(name) {}
+	Terminal(string name, LocationType type) : Location(name, type) {}
 };
 
 class Port : public Location {
@@ -141,7 +142,7 @@ public:
 	}
 
 protected:
-	Port(string name) : Location(name) {}
+	Port(string name) : Location(name, PortLocation) {}
 };
 
 class TruckTerminal : public Terminal {
@@ -154,7 +155,7 @@ public:
 	}
 
 protected:
-	TruckTerminal(string name) : Terminal(name) {}
+	TruckTerminal(string name) : Terminal(name, TruckTerminalLocation) {}
 };
 
 class BoatTerminal : public Terminal {
@@ -167,7 +168,7 @@ public:
 	}
 
 protected:
-	BoatTerminal(string name) : Terminal(name) {}
+	BoatTerminal(string name) : Terminal(name, BoatTerminalLocation) {}
 };
 
 class PlaneTerminal : public Terminal {
@@ -180,7 +181,7 @@ public:
 	}
 
 protected:
-	PlaneTerminal(string name) : Terminal(name) {}
+	PlaneTerminal(string name) : Terminal(name, PlaneTerminalLocation) {}
 };
 
 
@@ -243,17 +244,17 @@ public:
 	void sourceIs(Location::Ptr _source) { source_ = _source; }
 
 	Miles length() const { return length_; }
-	void lengthIs(Miles miles);
+	void lengthIs(Miles _length) { length_ = _length; }
 
 	Location::Ptr destination() const { return destination_; }
 	void destinationIs(Location::Ptr _destination) 
 		{ destination_ = _destination; }
 
 	DifficultyLevel difficulty() const { return difficulty_; }
-	void difficultyIs(DifficultyLevel dif);
+	void difficultyIs(DifficultyLevel _difficulty) { difficulty_ = _difficulty; } 
 
 	ExpediteOptions expedite() const { return expedite_; }
-	void expediteIs(ExpediteOptions _expedite);
+	void expediteIs(ExpediteOptions _expedite) { expedite_ = _expedite; }
 
 	Segment::Ptr returnSegment() const { return return_segment_; }
 	void returnSegmentIs(Ptr seg);
@@ -282,7 +283,7 @@ public:
 	typedef Fwk::Ptr<BoatSegment> Ptr;
 
 	static Ptr BoatSegmentIs(string name) {
-		Ptr seg = new BoatSegment(name, Boat);
+		Ptr seg = new BoatSegment(name, BoatMode);
 		return seg;
 	}
 
@@ -306,7 +307,7 @@ public:
 	typedef Fwk::Ptr<PlaneSegment> Ptr;
 
 	static Ptr PlaneSegmentIs(string name) {
-		Ptr seg = new PlaneSegment(name, Plane);
+		Ptr seg = new PlaneSegment(name, PlaneMode);
 		return seg;
 	}
 
@@ -320,7 +321,7 @@ public:
 	typedef Fwk::Ptr<TruckSegment> Ptr;
 
 	static Ptr TruckSegmentIs(string name) {
-		Ptr seg = new TruckSegment(name, Truck);
+		Ptr seg = new TruckSegment(name, TruckMode);
 		return seg;
 	}
 
@@ -413,10 +414,21 @@ public:
 	unsigned segments() { return segments_.size(); }
 	SegmentIterator segmentIter() { return segments_.begin(); }
 
+	ExpediteOptions expedite() const;
+	void expediteIs(ExpediteOptions _expedite);
+
+	Dollars cost() const { return cost_; }
+
+	Miles distance() const { return distance_; }
+
 protected:
-	Path() { start_loc_ = NULL; end_loc_ = NULL; }
+	Path() : start_loc_(NULL), end_loc_(NULL), cost_(0), time_(0), distance_(0) {}
 	Location::Ptr start_loc_;
 	Location::Ptr end_loc_;
+	Dollars cost_;
+	Hours time_;
+	Miles distance_;
+	ExpediteOptions expedite_;
 	vector<Segment::Ptr> segments_;
 
 };
@@ -470,9 +482,9 @@ public:
 
 	FleetDesc::Ptr fleet(TransportationMode mode) const {
 		switch(mode) {
-			case Truck: return truckFleet().ptr();
-			case Boat: return boatFleet().ptr();
-			case Plane: return planeFleet().ptr();
+			case TruckMode: return truckFleet().ptr();
+			case BoatMode: return boatFleet().ptr();
+			case PlaneMode: return planeFleet().ptr();
 		}
 		return NULL; //execution shouldn't get here
 	};

@@ -223,11 +223,11 @@ void StatsConfig::segmentReactorNew(Segment::Ptr seg)
 }
 
 void StatsConfig::NetworkReactor::onSegmentNew(Segment::Ptr seg) {
-	if (INSTANCE_OF(seg.ptr(), BoatSegment*)) {
+	if (seg->mode() == BoatMode) {
 		owner_->boatSegmentsIs(1 + owner_->boatSegments());
-	} else if (INSTANCE_OF(seg.ptr(), PlaneSegment*)) {
+	} else if (seg->mode() == PlaneMode) {
 		owner_->planeSegmentsIs(1 + owner_->planeSegments()); 
-	} else if (INSTANCE_OF(seg.ptr(), TruckSegment*)) {
+	} else if (seg->mode() == TruckMode) {
 		owner_->truckSegmentsIs(1 + owner_->truckSegments());
 	} else {
 		// invalid segment. do nothing
@@ -236,11 +236,11 @@ void StatsConfig::NetworkReactor::onSegmentNew(Segment::Ptr seg) {
 }
 
 void StatsConfig::NetworkReactor::onSegmentDel(Segment::Ptr seg) {
-	if (INSTANCE_OF(seg.ptr(), BoatSegment*)) {
+	if (seg->mode() == BoatMode) {
 		owner_->boatSegmentsIs(owner_->boatSegments() - 1);
-	} else if (INSTANCE_OF(seg.ptr(), PlaneSegment*)) {
+	} else if (seg->mode() == PlaneMode) {
 		owner_->planeSegmentsIs(owner_->planeSegments() - 1); 
-	} else if (INSTANCE_OF(seg.ptr(), TruckSegment*)) {
+	} else if (seg->mode() == TruckMode) {
 		owner_->truckSegmentsIs(owner_->truckSegments() - 1);
 	} else {
 		// invalid segment. do nothing
@@ -249,29 +249,29 @@ void StatsConfig::NetworkReactor::onSegmentDel(Segment::Ptr seg) {
 }
 
 void StatsConfig::NetworkReactor::onLocationNew(Location::Ptr loc) {
-	if (INSTANCE_OF(loc.ptr(), CustomerLocation*)) {
+	if (loc->type() == CustomerLocation) {
 		owner_->customerLocationsIs(1 + owner_->customerLocations());
-	} else if (INSTANCE_OF(loc.ptr(), Port*)) {
+	} else if (loc->type() == PortLocation) {
 		owner_->portsIs(1 + owner_->ports());
-	} else if (INSTANCE_OF(loc.ptr(), TruckTerminal*)) {
+	} else if (loc->type() == TruckTerminalLocation) {
 		owner_->truckTerminalsIs(1 + owner_->truckTerminals());
-	} else if (INSTANCE_OF(loc.ptr(), BoatTerminal*)) {
+	} else if (loc->type() == BoatTerminalLocation) {
 		owner_->boatTerminalsIs(1 + owner_->boatTerminals());
-	} else if (INSTANCE_OF(loc.ptr(), PlaneTerminal*)) {
+	} else if (loc->type() == PlaneTerminalLocation) {
 		owner_->planeTerminalsIs(1 + owner_->planeTerminals());
 	}
 }
 
 void StatsConfig::NetworkReactor::onLocationDel(Location::Ptr loc) {
-	if (INSTANCE_OF(loc.ptr(), CustomerLocation*)) {
+	if (loc->type() == CustomerLocation) {
 		owner_->customerLocationsIs(owner_->customerLocations() - 1);
-	} else if (INSTANCE_OF(loc.ptr(), Port*)) {
+	} else if (loc->type() == PortLocation) {
 		owner_->portsIs(owner_->ports() - 1);
-	} else if (INSTANCE_OF(loc.ptr(), TruckTerminal*)) {
+	} else if (loc->type() == TruckTerminalLocation) {
 		owner_->truckTerminalsIs(owner_->truckTerminals() - 1);
-	} else if (INSTANCE_OF(loc.ptr(), BoatTerminal*)) {
+	} else if (loc->type() == BoatTerminalLocation) {
 		owner_->boatTerminalsIs(owner_->boatTerminals() - 1);
-	} else if (INSTANCE_OF(loc.ptr(), PlaneTerminal*)) {
+	} else if (loc->type() == PlaneTerminalLocation) {
 		owner_->planeTerminalsIs(owner_->planeTerminals() - 1);
 	}
 }
@@ -326,7 +326,17 @@ void StatsConfig::expeditedIs(Stats::EntityCount _expedited) {
 	expedited_ = _expedited; 
 }
 
+void Path::expediteIs(ExpediteOptions _expedite) {
+	if (_expedite == expedite_) return;
+	if (segments_.empty()) {
+		expedite_ = _expedite;
+	}
+}
+
 void Path::segmentNew(Segment::Ptr seg) {
+	if (seg->expedite() != expedite_)
+		return;
+
 	if (end_loc_ == NULL || 
 			end_loc_ == seg->source()) {
 		segments_.push_back(seg);
