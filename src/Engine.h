@@ -24,11 +24,11 @@ using std::map;
 namespace Shipping {
 
 
-class Minutes : Ordinal<Minutes, unsigned int> {
+class Hours : Ordinal<Hours, unsigned int> {
 public:
-	Minutes(unsigned int _minutes) : Ordinal<Minutes, unsigned int>(_minutes) {}
+	Hours(unsigned int _minutes) : Ordinal<Hours, unsigned int>(_minutes) {}
 
-	bool operator==(const Minutes& v) const
+	bool operator==(const Hours& v) const
 	{ return Nominal::value_ == v.value_; }
 };
 
@@ -64,6 +64,17 @@ public:
 
 	bool operator==(const PackageCapacity& v) const
 	{ return Nominal::value_ == v.value_; }
+};
+
+enum ExpediteOptions {
+	ExpediteNotSupported,
+	ExpediteSupported
+};
+
+enum TransportationMode {
+	Truck,
+	Boat,
+	Plane
 };
 
 class Segment;
@@ -220,28 +231,23 @@ public:
 		{ return std::abs(Nominal::value_ - v.value_) < 1e-2; }
 	};
 
-	enum ExpediteOptions {
-		ExpediteNotSupported,
-		ExpediteSupported
-	};
-
-  static Segment::Ptr SegmentIs(string name, Location::Ptr _source, 
-  															Location::Ptr _destination) {
-  	Ptr m = new Segment(name);
-  	return m;
-  };
+  // static Segment::Ptr SegmentIs(string name, TransportationMode mode) {
+  // 	Ptr m = new Segment(name, mode);
+  // 	return m;
+  // };
 
 	string name() const { return name_; }
 	void nameIs(string name) { name_ = name;}
 
 	Location::Ptr source() const { return source_; }
-	// void sourceIs(Location loc);
+	void sourceIs(Location::Ptr _source) { source_ = _source; }
 
 	Miles length() const { return length_; }
 	void lengthIs(Miles miles);
 
 	Location::Ptr destination() const { return destination_; }
-	// void destinationIs(Segment seg);
+	void destinationIs(Location::Ptr _destination) 
+		{ destination_ = _destination; }
 
 	DifficultyLevel difficulty() const { return difficulty_; }
 	void difficultyIs(DifficultyLevel dif);
@@ -249,17 +255,24 @@ public:
 	ExpediteOptions expedite() const { return expedite_; }
 	void expediteIs(ExpediteOptions _expedite);
 
+	Segment::Ptr returnSegment() const { return return_segment_; }
+	void returnSegmentIs(Ptr seg);
+
+	TransportationMode mode() const { return mode_; }
+
 	void notifieeNew(Notifiee *n);
 	void notifieeDel(Notifiee *n);
 
 protected:
-	Segment(string name);
+	Segment(string name, TransportationMode mode);
 	string name_;
-	Fwk::Ptr<Location> source_;
-	Fwk::Ptr<Location> destination_;
+	TransportationMode mode_;
+	Location::Ptr source_;
+	Location::Ptr destination_;
 	Miles length_;
 	DifficultyLevel difficulty_;
 	ExpediteOptions expedite_;
+	Ptr return_segment_;
 	vector<Notifiee *> notifiee_;
 
 };
@@ -269,12 +282,12 @@ public:
 	typedef Fwk::Ptr<BoatSegment> Ptr;
 
 	static Ptr BoatSegmentIs(string name) {
-		Ptr seg = new BoatSegment(name);
+		Ptr seg = new BoatSegment(name, Boat);
 		return seg;
 	}
 
 protected:
-	BoatSegment(string name) : Segment(name) {}
+	BoatSegment(string name, TransportationMode mode) : Segment(name, mode) {}
 
 
 	// BoatSegment(Location::Ptr& _source, Location::Ptr& _destination) {
@@ -293,12 +306,12 @@ public:
 	typedef Fwk::Ptr<PlaneSegment> Ptr;
 
 	static Ptr PlaneSegmentIs(string name) {
-		Ptr seg = new PlaneSegment(name);
+		Ptr seg = new PlaneSegment(name, Plane);
 		return seg;
 	}
 
 protected:
-	PlaneSegment(string name) : Segment(name) {}
+	PlaneSegment(string name, TransportationMode mode) : Segment(name, mode) {}
 };
 //subscribe to notifications from fleet object
 
@@ -307,12 +320,12 @@ public:
 	typedef Fwk::Ptr<TruckSegment> Ptr;
 
 	static Ptr TruckSegmentIs(string name) {
-		Ptr seg = new TruckSegment(name);
+		Ptr seg = new TruckSegment(name, Truck);
 		return seg;
 	}
 
 protected:
-	TruckSegment(string name) : Segment(name) {}
+	TruckSegment(string name, TransportationMode mode) : Segment(name, mode) {}
 };
 
 
@@ -384,7 +397,50 @@ protected:
 	TruckFleetDesc() : FleetDesc() {}
 };
 
-class Path {};
+
+class Path : public Fwk::PtrInterface<Path> {
+
+public:
+	typedef Fwk::Ptr<Path> Ptr;
+	typedef vector<Segment::Ptr>::iterator SegmentIterator;
+
+	static Ptr PathIs() {
+		Ptr m = new Path();
+		return m;
+	}
+
+	void segmentNew(Segment::Ptr);
+	unsigned segments() { return segments_.size(); }
+	SegmentIterator segmentIter() { return segments_.begin(); }
+
+protected:
+	Path() { start_loc_ = NULL; end_loc_ = NULL; }
+	Location::Ptr start_loc_;
+	Location::Ptr end_loc_;
+	vector<Segment::Ptr> segments_;
+
+};
+
+class PathList : public Fwk::PtrInterface<PathList> {
+public:
+	typedef Fwk::Ptr<PathList> Ptr;
+	typedef vector<Path::Ptr>::iterator PathIterator;
+
+	static Ptr PathListNew() {
+		Ptr m = new PathList();
+		return m;
+	}
+
+	unsigned paths() const { return paths_.size(); }
+	vector<Path::Ptr>::iterator pathIter() { return paths_.begin(); }
+	void pathNew(Path::Ptr);
+
+protected:
+	PathList() {}
+	vector<Path::Ptr> paths_;
+
+};
+
 
 class Network : public Fwk::PtrInterface<Network> {
 public:
@@ -402,6 +458,24 @@ public:
 	Segment::Ptr segment(string name);
 	void segmentIs(Segment::Ptr seg);
 	void segmentDel(string name);
+
+	BoatFleetDesc::Ptr boatFleet() const { return boat_fleet_; }
+	void boatFleetIs(BoatFleetDesc::Ptr _desc) { boat_fleet_ = _desc; }
+
+	TruckFleetDesc::Ptr truckFleet() const { return truck_fleet_; }
+	void truckFleetIs(TruckFleetDesc::Ptr _desc) { truck_fleet_ = _desc; }
+
+	PlaneFleetDesc::Ptr planeFleet() const { return plane_fleet_; }
+	void planeFleetIs(PlaneFleetDesc::Ptr _plane) { plane_fleet_ = _plane; }
+
+	FleetDesc::Ptr fleet(TransportationMode mode) const {
+		switch(mode) {
+			case Truck: return truckFleet().ptr();
+			case Boat: return boatFleet().ptr();
+			case Plane: return planeFleet().ptr();
+		}
+		return NULL; //execution shouldn't get here
+	};
 
   static Network::Ptr NetworkIs(string name) {
      Ptr net = new Network(name);
@@ -443,6 +517,9 @@ protected:
 	string name_;
 	map<string, Location::Ptr> locations_;
 	map<string, Segment::Ptr> segments_;
+	BoatFleetDesc::Ptr boat_fleet_;
+	PlaneFleetDesc::Ptr plane_fleet_;
+	TruckFleetDesc::Ptr truck_fleet_;
   vector<Notifiee *> notifiee_;
 	
 
@@ -502,7 +579,7 @@ public:
 	protected:
 		SegmentReactor(StatsConfig *s) : owner_(s) {}
 		StatsConfig *owner_;
-		Segment::ExpediteOptions oldval;
+		ExpediteOptions oldval;
 	};
 
 	typedef vector<SegmentReactor::Ptr >::iterator SegmentReactorIterator;
@@ -548,7 +625,27 @@ protected:
 
 };
 
-class Connectivity {};
+
+class Connectivity : public Fwk::PtrInterface<Connectivity> {
+
+public:
+	typedef Fwk::Ptr<Connectivity> Ptr;
+
+	static Ptr ConnectivityIs(Network::Ptr net) {
+		Ptr m = new Connectivity(net);
+		return m;
+	}
+
+	Network::Ptr network() const { return net_; }
+	vector<Path::Ptr> explore(Miles distance, Dollars cost, Hours time, 
+														ExpediteOptions expedite);
+	vector<Path::Ptr> connect(Location::Ptr start, Location::Ptr end,
+														ExpediteOptions expedite);
+
+protected:
+	Connectivity(Network::Ptr net) { net_ = net; }
+	Network::Ptr net_;
+};
 
 
 } /* end namespace */

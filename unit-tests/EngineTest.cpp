@@ -41,8 +41,8 @@ TEST(Network, NotifieeTest)
 
   Location::Ptr loc1 = Location::LocationIs("sf");
   Location::Ptr loc2 = Location::LocationIs("paris");
-  Segment::Ptr seg1 = Segment::SegmentIs("280", loc1, loc2);
-  Segment::Ptr seg2 = Segment::SegmentIs("101", loc2, loc1);
+  Segment::Ptr seg1 = TruckSegment::TruckSegmentIs("280");
+  Segment::Ptr seg2 = TruckSegment::TruckSegmentIs("101");
 
   ASSERT_TRUE(rec->locations == 0);
   ASSERT_TRUE(rec->segments == 0);
@@ -91,7 +91,50 @@ TEST(Network, NotifieeTest)
   net->segmentDel(seg2->name());
   ASSERT_TRUE(rec->locations == 0);
   ASSERT_TRUE(rec->segments == 0);
+}
 
+TEST(Network, BoatFleet)
+{
+  Network::Ptr net = Network::NetworkIs("network");
+  BoatFleetDesc::Ptr b  = BoatFleetDesc::BoatFleetDescIs();
+  net->boatFleetIs(b);
+  ASSERT_TRUE(net->boatFleet() == b);
+}
+
+TEST(Network, TruckFleet)
+{
+  Network::Ptr net = Network::NetworkIs("network");
+  TruckFleetDesc::Ptr t  = TruckFleetDesc::TruckFleetDescIs();
+  net->truckFleetIs(t);
+  ASSERT_TRUE(net->truckFleet() == t);
+}
+
+TEST(Network, PlaneFleet)
+{
+  Network::Ptr net = Network::NetworkIs("network");
+  PlaneFleetDesc::Ptr p  = PlaneFleetDesc::PlaneFleetDescIs();
+  net->planeFleetIs(p);
+  ASSERT_TRUE(net->planeFleet() == p);
+}
+
+TEST(Network, Fleet)
+{
+  Network::Ptr net = Network::NetworkIs("network");
+  BoatFleetDesc::Ptr b  = BoatFleetDesc::BoatFleetDescIs();
+  PlaneFleetDesc::Ptr p = PlaneFleetDesc::PlaneFleetDescIs();
+  TruckFleetDesc::Ptr t = TruckFleetDesc::TruckFleetDescIs();
+
+  net->boatFleetIs(b);
+  net->planeFleetIs(p);
+  net->truckFleetIs(t);
+
+  ASSERT_TRUE(net->fleet(Truck) == t);
+  ASSERT_TRUE(net->fleet(Boat) == b);
+  ASSERT_TRUE(net->fleet(Plane) == p);
+
+  ASSERT_TRUE(net->fleet(Truck) != b);
+  ASSERT_TRUE(net->fleet(Boat) != p);
+  ASSERT_TRUE(net->fleet(Plane) != t);
 }
 
 TEST(Engine, InstanceOf) 
@@ -138,7 +181,6 @@ TEST(Stats, onLocationNew)
   ASSERT_TRUE(stats->boatSegments() == 0);
 }
 
-
 TEST(Stats, onSegmentNew) 
 {
   Network::Ptr net = Network::NetworkIs("net"); 
@@ -159,9 +201,6 @@ TEST(Stats, onSegmentNew)
   ASSERT_TRUE(stats->truckSegments() == 1);
   ASSERT_TRUE(stats->planeSegments() == 0);
   ASSERT_TRUE(stats->boatSegments() == 1);
-
-//test stats delete!!!
-
 }
 
 TEST(Stats, onExpedite) 
@@ -169,8 +208,8 @@ TEST(Stats, onExpedite)
   Network::Ptr net = Network::NetworkIs("net"); 
   Stats::Ptr stats = StatsConfig::StatsConfigIs(net);
 
-  Segment::ExpediteOptions val1 = Segment::ExpediteNotSupported;
-  Segment::ExpediteOptions val2 = Segment::ExpediteSupported;
+  ExpediteOptions val1 = ExpediteNotSupported;
+  ExpediteOptions val2 = ExpediteSupported;
 
   TruckSegment::Ptr seg1 = TruckSegment::TruckSegmentIs("tseg1");
   TruckSegment::Ptr seg2 = TruckSegment::TruckSegmentIs("tseg2");
@@ -243,8 +282,6 @@ TEST(Stats, onLocationDel)
   ASSERT_TRUE(stats->boatSegments() == 0);
 }
 
-
-
 TEST(Stats, onSegmentDel) 
 {
   Network::Ptr net = Network::NetworkIs("net"); 
@@ -270,8 +307,29 @@ TEST(Stats, onSegmentDel)
   ASSERT_TRUE(stats->truckSegments() == 0);
   ASSERT_TRUE(stats->planeSegments() == 0);
   ASSERT_TRUE(stats->boatSegments() == 0);
-
 }
+
+TEST(FleetDesc, speed) 
+{
+  FleetDesc::Ptr fleet = BoatFleetDesc::BoatFleetDescIs();
+  fleet->speedIs(5);
+  ASSERT_TRUE(fleet->speed() == 5);
+}
+
+TEST(FleetDesc, capacity) 
+{
+  FleetDesc::Ptr fleet = BoatFleetDesc::BoatFleetDescIs();
+  fleet->capacityIs(25);
+  ASSERT_TRUE(fleet->capacity() == 25);
+}
+
+TEST(FleetDesc, costPerMile) 
+{
+  FleetDesc::Ptr fleet = BoatFleetDesc::BoatFleetDescIs();
+  fleet->costPerMileIs(210);
+  ASSERT_TRUE(fleet->costPerMile() == 210);
+}
+
 
 //test stats delete!!!
 

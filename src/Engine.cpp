@@ -30,7 +30,7 @@ void Segment::notifieeDel(Notifiee * n) {
 }
 
 void Segment::expediteIs(ExpediteOptions _expedite) {
-	// if (_expedite == expedite_) return;
+	if (_expedite == expedite_) return;
 	expedite_ = _expedite;
 	for (NotifieeIterator it = notifiee_.begin();
 			 it != notifiee_.end();
@@ -39,7 +39,13 @@ void Segment::expediteIs(ExpediteOptions _expedite) {
 	}
 }
 
-Segment::Segment(string name) : name_(name), length_(0), difficulty_(1.0) {} 
+void Segment::returnSegmentIs(Segment::Ptr seg) {
+	if (return_segment_ == seg) return;
+	return_segment_ = seg;
+}
+
+Segment::Segment(string name, TransportationMode mode) : name_(name), 
+	length_(0), difficulty_(1.0), mode_(mode) {} 
 
 
 void Segment::Notifiee::notifierIs(const Segment::Ptr _notifier) {
@@ -271,7 +277,7 @@ void StatsConfig::NetworkReactor::onLocationDel(Location::Ptr loc) {
 }
 
 void StatsConfig::SegmentReactor::onExpedite() {
-	Segment::ExpediteOptions newval = notifier_->expedite();
+	ExpediteOptions newval = notifier_->expedite();
 	if (oldval == newval) return;
 	oldval = newval;
 	if (newval) {
@@ -320,12 +326,30 @@ void StatsConfig::expeditedIs(Stats::EntityCount _expedited) {
 	expedited_ = _expedited; 
 }
 
+void Path::segmentNew(Segment::Ptr seg) {
+	if (end_loc_ == NULL || 
+			end_loc_ == seg->source()) {
+		segments_.push_back(seg);
+		end_loc_ = seg->destination();
+	}
+
+	if (start_loc_ == NULL) {
+		start_loc_ = seg->source();
+	}
+}
+
+void PathList::pathNew(Path::Ptr p) {
+	paths_.push_back(p);
+}
+
+vector<Path::Ptr> Connectivity::explore(Miles distance, 
+	Dollars cost, Hours time, ExpediteOptions expedite)
+{}
+
+vector<Path::Ptr> Connectivity::connect(Location::Ptr start, 
+		Location::Ptr end, ExpediteOptions expedite) {}
+
 } /* end namespace */
-
-
-
-
-
 
 
 
