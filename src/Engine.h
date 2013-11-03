@@ -9,6 +9,8 @@
 #include <vector>
 #include <map>
 #include <cmath>
+#include <queue>
+#include <set>
 #include <stdint.h>
 #include "PtrInterface.h"
 #include "Ptr.h"
@@ -20,8 +22,20 @@
 using std::vector;
 using std::cerr;
 using std::map;
+using std::queue;
+using std::set;
 
 namespace Shipping {
+
+class Factor : public Ordinal<Factor, float>
+{
+public:
+	Factor(float factor) : Ordinal<Factor, float>(factor) {}
+
+	bool operator==(const Factor& v) const
+	{ return std::abs(Nominal::value_ - v.value_) < 1e-2; }
+
+};
 
 class DifficultyLevel : public Ordinal<DifficultyLevel, float> 
 {
@@ -71,6 +85,9 @@ public:
 	DollarsPerMile operator*(const DifficultyLevel& v) const
 	{ return this->value() * v.value(); }
 
+	DollarsPerMile operator*=(const Factor& v)
+	{ return (Nominal::value_ *= v.value()); }
+
 };
 
 class MilesPerHour : public Ordinal<MilesPerHour, float> {
@@ -79,6 +96,9 @@ public:
 
 	bool operator==(const MilesPerHour& v) const
 	{ return std::abs(Nominal::value_ - v.value_) < 1e-2; }
+
+	MilesPerHour operator*=(const Factor& v)
+	{ return (Nominal::value_ *= v.value()); }
 };
 
 class Miles : public Ordinal<Miles, unsigned int> {
@@ -139,9 +159,11 @@ public:
 	string name() const { return name_; }
 	void nameIs(string name) { name_ = name;}
 
-  void segmentIs(Segment *seg); //use a weak pointer to avoid circular references
-	uint32_t segments() const;
-	SegmentIterator segmentIterator() { return segment_.begin(); };
+  void segmentIs(Fwk::Ptr<Segment> seg); 
+  Fwk::Ptr<Segment> segment(unsigned index) const;
+  void segmentDel(Fwk::Ptr<Segment> seg);
+	uint32_t segments() const { return segments_.size(); }
+	SegmentIterator segmentIterator() { return segments_.begin(); };
 
 	LocationType type() const { return type_; }
 
@@ -149,7 +171,7 @@ protected:
 	Location(string name, LocationType type) : name_(name), type_(type) {};
 	string name_;
 	LocationType type_;
-  vector<Fwk::Ptr<Segment> > segment_;
+  vector<Fwk::Ptr<Segment> > segments_;
 
 //subscribe to notifications from segments that are added to it.
 };
@@ -262,24 +284,17 @@ public:
 
    };
 
-
-  // static Segment::Ptr SegmentIs(string name, TransportationMode mode) {
-  // 	Ptr m = new Segment(name, mode);
-  // 	return m;
-  // };
-
 	string name() const { return name_; }
 	void nameIs(string name) { name_ = name;}
 
 	Location::Ptr source() const { return source_; }
-	void sourceIs(Location::Ptr _source) { source_ = _source; }
+	void sourceIs(Location::Ptr _source);
 
 	Miles length() const { return length_; }
 	void lengthIs(Miles _length) { length_ = _length; }
 
 	Location::Ptr destination() const { return destination_; }
-	void destinationIs(Location::Ptr _destination) 
-		{ destination_ = _destination; }
+	void destinationIs(Location::Ptr _destination);
 
 	DifficultyLevel difficulty() const { return difficulty_; }
 	void difficultyIs(DifficultyLevel _difficulty) { difficulty_ = _difficulty; } 
@@ -623,12 +638,27 @@ public:
 		return m;
 	}
 
+	Path::Ptr clone() {
+		Ptr c = new Path();
+		c->start_loc_ = start_loc_;
+		c->end_loc_ = end_loc_;
+		c->cost_ = cost_;
+		c->time_ = time_;
+		c->length_ = length_;
+		c->expedite_ = expedite_;
+		c->segments_ = segments_;
+		return c;
+	}
+
 	void segmentNew(Segment::Ptr, FleetDesc::Ptr);
 	unsigned segments() { return segments_.size(); }
 	SegmentIterator segmentIter() { return segments_.begin(); }
 
-	ExpediteOptions expedite() const;
+	ExpediteOptions expedite() const { return expedite_; }
 	void expediteIs(ExpediteOptions _expedite);
+
+	Location::Ptr end() const {return end_loc_; }
+	Location::Ptr start() const {return start_loc_; }
 
 	Dollars cost() const { return cost_; }
 
@@ -641,6 +671,7 @@ protected:
 		expedite_(ExpediteNotSupported) {}
 	Location::Ptr start_loc_;
 	Location::Ptr end_loc_;
+	map<string, bool> visited_;
 	Dollars cost_;
 	Hours time_;
 	Miles length_;
@@ -681,14 +712,17 @@ public:
 	}
 
 	Network::Ptr network() const { return net_; }
-	vector<Path::Ptr> explore(Miles distance, Dollars cost, Hours time, 
-														ExpediteOptions expedite);
-	vector<Path::Ptr> connect(Location::Ptr start, Location::Ptr end,
+	PathList::Ptr explore(Location::Ptr start, Miles distance, Dollars cost, 
+												Hours time, ExpediteOptions expedite);
+	PathList::Ptr connect(Location::Ptr start, Location::Ptr end,
 														ExpediteOptions expedite);
 
 protected:
 	Connectivity(Network::Ptr net) { net_ = net; }
 	Network::Ptr net_;
+	void enqueueNextSegments(queue<Path::Ptr> & q, Path::Ptr& p, 
+												 	 ExpediteOptions expedite);
+	bool meetPathConstraints(Path::Ptr p, Miles length, Hours time, Dollars cost);
 };
 
 

@@ -3,6 +3,8 @@
 
 using std::cout;
 using std::endl;
+using std::set;
+using std::queue;
 
 namespace Shipping {
 
@@ -28,6 +30,19 @@ void Segment::notifieeDel(Notifiee * n) {
 		}
 	}
 }
+
+void Segment::sourceIs(Location::Ptr _source) { 
+	if (source_ == _source) return;
+	source_ = _source;
+	source_->segmentIs(this);
+}
+
+void Segment::destinationIs(Location::Ptr _destination) {
+	if (destination_ == _destination) return;
+	destination_ = _destination;
+	destination_->segmentIs(this);
+}
+
 
 void Segment::expediteIs(ExpediteOptions _expedite) {
 	if (_expedite == expedite_) return;
@@ -63,21 +78,39 @@ Segment::Notifiee::~Notifiee() {
 }
 
 
-/*
-	// make operation idempotent
-	if (segments_.find(seg->name) != segments_.end())
-		return;
-	segments_[seg->name] = seg;
-	// for (SegmentIterator it = segment_.begin(); 
-	// 		 it != segment_.end();
-	// 		 ++it) {
-	// 	if (it->ptr() == seg) 
-	// 		return;
-	// }
+Segment::Ptr Location::segment(unsigned index) const {
+	if (index < segments_.size()) {
+		return segments_[index];
+	}
+	return NULL;
+}
 
-	Segment::Ptr p = seg;
-	// segment_.push_back(p);
-	*/
+void Location::segmentIs(Segment::Ptr seg) {
+
+	// make operation idempotent
+	for (vector<Segment::Ptr>::iterator it = segments_.begin();
+			it != segments_.end();
+			++it) {
+		if (*it == seg) {
+			return;
+		}
+	}
+
+	segments_.push_back(seg);
+}
+
+
+void Location::segmentDel(Segment::Ptr seg) {
+
+	for (vector<Segment::Ptr>::iterator it = segments_.begin();
+			it != segments_.end();
+			++it) {
+		if (*it == seg) {
+			segments_.erase(it);
+			return;
+		}
+	}
+}
 
 Segment::Ptr Network::segment(string name) {
 	if (segments_.find(name) == segments_.end())
@@ -334,23 +367,40 @@ void Path::expediteIs(ExpediteOptions _expedite) {
 }
 
 void Path::segmentNew(Segment::Ptr seg, FleetDesc::Ptr fleet) {
-	if (seg->expedite() != expedite_)
+
+	/* avoid paths that don't support the expedite property */
+	if (expedite_ == ExpediteSupported &&
+			seg->expedite() != ExpediteSupported)
 		return;
 
+	/* avoid segments that don't logicially extend the path */
 	if (end_loc_ != NULL && 
 			end_loc_ != seg->source()) {
 		return;	
 	}
 
+	/* avoid circular paths */
+	if (visited_[seg->destination()->name()])
+		return;
+
 	segments_.push_back(seg);
 	end_loc_ = seg->destination();
+	visited_[end_loc_->name()] = true;
 
 	if (start_loc_ == NULL) {
 		start_loc_ = seg->source();
+		visited_[start_loc_->name()] = true;
 	}
 
-	cost_ += seg->length() * (fleet->costPerMile() * seg->difficulty());
-	time_ += seg->length() / fleet->speed();
+	DollarsPerMile costPerMile = fleet->costPerMile();
+	MilesPerHour speed = fleet->speed();
+	if (expedite_ == ExpediteSupported) {
+		speed *= Factor(1.3);
+		costPerMile *= Factor(1.5);
+	}
+
+	cost_ += seg->length() * (costPerMile * seg->difficulty());
+	time_ += seg->length() / speed;
 	length_ += seg->length(); 
 
 }
@@ -359,12 +409,90 @@ void PathList::pathNew(Path::Ptr p) {
 	paths_.push_back(p);
 }
 
-vector<Path::Ptr> Connectivity::explore(Miles distance, 
-	Dollars cost, Hours time, ExpediteOptions expedite)
-{}
+bool Connectivity::meetPathConstraints(Path::Ptr p, Miles length, Hours time, 
+																			 Dollars cost)
+{
+	if (p->cost() < cost &&
+			p->time() < time &&
+			p->length() < length)
+		return true;
+	else
+		return false;
+}
 
-vector<Path::Ptr> Connectivity::connect(Location::Ptr start, 
-		Location::Ptr end, ExpediteOptions expedite) {}
+void Connectivity::enqueueNextSegments(queue<Path::Ptr>& q, Path::Ptr& p, 
+												 ExpediteOptions expedite)
+{
+	Location::Ptr loc = p->end();
+	for (Location::SegmentIterator it = loc->segmentIterator();
+			 it != loc->segmentIterator() + loc->segments();
+			 ++it) {
+		Segment::Ptr seg = *it;
+
+		if (expedite == ExpediteSupported &&
+				seg->expedite() == ExpediteNotSupported)
+			continue;
+
+		Path::Ptr newp = p->clone();
+		unsigned oldSegmentsCount = newp->segments();
+		newp->segmentNew(seg, net_->fleet(seg->mode()));
+
+		//enqueue only if new segment extends the path
+		if (newp->segments() > oldSegmentsCount) {
+			q.push(newp);
+			// cout << "push: path(" << newp->start()->name() << "-> " << 
+			// 	newp->end()->name() << ")" << endl;
+		}
+	}
+}
+
+PathList::Ptr Connectivity::explore(Location::Ptr start, Miles length, 
+																		Dollars cost, Hours time, 
+																		ExpediteOptions expedite) 
+{
+	PathList::Ptr plist = PathList::PathListNew();
+	queue<Path::Ptr> toExplore;
+
+	for(Location::SegmentIterator it = start->segmentIterator();
+			it != start->segmentIterator() + start->segments();
+			++it) {
+		Segment::Ptr seg = *it;
+		Path::Ptr p = Path::PathIs();
+		p->expediteIs(ExpediteNotSupported);
+		p->segmentNew(seg, net_->fleet(seg->mode()));
+		// cout << "seg->source(): " << seg->source()->name() <<
+		// 	", seg->destination(): " << seg->destination()->name() << endl;
+		// cout << "path->start(): " << p->start()->name() << ", p->end(): "
+		// 	<< p->end()->name() << endl << endl; 
+		toExplore.push(p);
+
+		//expedited paths are separate paths
+		if (seg->expedite() == ExpediteSupported) {
+			Path::Ptr pexp = Path::PathIs();
+			pexp->expediteIs(ExpediteSupported);
+			pexp->segmentNew(seg, net_->fleet(seg->mode()));
+			toExplore.push(pexp);
+		}
+	}
+
+	while(!toExplore.empty()) {
+		Path::Ptr p = toExplore.front();
+		toExplore.pop();
+		// cout << "pop: path(" << p->start()->name() << "-> " 
+		// 	<< p->end()->name() << ")" << endl;
+		if (meetPathConstraints(p, length, time, cost)) {
+			plist->pathNew(p);
+			enqueueNextSegments(toExplore, p, expedite);
+		}
+	}
+
+	return plist;
+}
+
+PathList::Ptr Connectivity::connect(Location::Ptr start, Location::Ptr end,
+																		ExpediteOptions expedite) 
+{
+}
 
 } /* end namespace */
 

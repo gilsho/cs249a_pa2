@@ -10,6 +10,136 @@ using namespace Shipping;
 using std::cout;
 using std::endl;
 
+Network::Ptr prepareNetwork1() 
+{
+  Network::Ptr net = Network::NetworkIs("net1");
+
+  TruckFleetDesc::Ptr f1 = TruckFleetDesc::TruckFleetDescIs();
+  BoatFleetDesc::Ptr f2 = BoatFleetDesc::BoatFleetDescIs();
+  PlaneFleetDesc::Ptr f3 = PlaneFleetDesc::PlaneFleetDescIs();
+
+  net->truckFleetIs(f1);
+  net->boatFleetIs(f2);
+  net->planeFleetIs(f3);
+
+  f1->speedIs(5);
+  f2->speedIs(6);
+  f3->speedIs(7);
+
+  f1->costPerMileIs(10);
+  f2->costPerMileIs(20);
+  f3->costPerMileIs(30);
+
+  Location::Ptr loc1 = Customer::CustomerIs("cent");
+  Location::Ptr loc2 = Port::PortIs("r1");
+  Location::Ptr loc3 = Customer::CustomerIs("c1");
+  Location::Ptr loc4 = TruckTerminal::TruckTerminalIs("t2");
+  Location::Ptr loc5 = Port::PortIs("r2");
+  Location::Ptr loc6 = BoatTerminal::BoatTerminalIs("b3");
+  Location::Ptr loc7 = BoatTerminal::BoatTerminalIs("bb3");
+
+  net->locationIs(loc1);
+  net->locationIs(loc2);
+  net->locationIs(loc3);
+  net->locationIs(loc4);
+  net->locationIs(loc5);
+  net->locationIs(loc6);
+
+  Segment::Ptr seg1 = PlaneSegment::PlaneSegmentIs("pseg1");
+  Segment::Ptr seg2 = BoatSegment::BoatSegmentIs("pseg2");
+  Segment::Ptr seg3 = BoatSegment::BoatSegmentIs("bseg1");
+  Segment::Ptr seg4 = BoatSegment::BoatSegmentIs("bseg2");
+  Segment::Ptr seg5 = TruckSegment::TruckSegmentIs("tseg1");
+  Segment::Ptr seg6 = TruckSegment::TruckSegmentIs("tseg2");
+
+  seg1->sourceIs(loc1); seg1->destinationIs(loc2);
+  seg2->sourceIs(loc2); seg2->destinationIs(loc3);
+  seg3->sourceIs(loc1); seg3->destinationIs(loc6);
+  seg4->sourceIs(loc6); seg4->destinationIs(loc7);
+  seg5->sourceIs(loc1); seg5->destinationIs(loc4);
+  seg6->sourceIs(loc4); seg6->destinationIs(loc5);
+
+  net->segmentIs(seg1);
+  net->segmentIs(seg2);
+  net->segmentIs(seg3);
+  net->segmentIs(seg4);
+  net->segmentIs(seg5);
+  net->segmentIs(seg6);
+
+  seg1->lengthIs(100);
+  seg2->lengthIs(200);
+  seg3->lengthIs(300);
+  seg4->lengthIs(400);
+  seg5->lengthIs(500);
+  seg6->lengthIs(600);
+
+  seg1->difficultyIs(1.0);
+  seg2->difficultyIs(2.0);
+  seg3->difficultyIs(1.0);
+  seg4->difficultyIs(3.0);
+  seg5->difficultyIs(1.0);
+  seg6->difficultyIs(4.0);
+
+  seg1->expediteIs(ExpediteSupported);
+  seg2->expediteIs(ExpediteSupported);
+  seg3->expediteIs(ExpediteNotSupported);
+  seg4->expediteIs(ExpediteSupported);
+  seg5->expediteIs(ExpediteNotSupported);
+  seg6->expediteIs(ExpediteNotSupported);
+
+  return net;
+}
+
+TEST(Location, name)
+{
+  Location::Ptr loc1 = Customer::CustomerIs("loc1");
+  Location::Ptr loc2 = Customer::CustomerIs("loc2");
+  ASSERT_TRUE(loc1->name() == "loc1");
+  ASSERT_TRUE(loc2->name() == "loc2");
+}
+
+TEST(Location, segmentIs)
+{
+  Location::Ptr loc1 = Customer::CustomerIs("loc1");
+  Segment::Ptr seg = BoatSegment::BoatSegmentIs("seg");
+  seg->sourceIs(loc1);
+  ASSERT_TRUE(loc1->segment(0) == seg);
+  ASSERT_TRUE(loc1->segments() == 1);
+}
+
+TEST(Segment, sourceIs) 
+{
+  Location::Ptr loc1 = Customer::CustomerIs("loc1");
+  Location::Ptr loc2 = Customer::CustomerIs("loc2");
+  Segment::Ptr seg = BoatSegment::BoatSegmentIs("seg");
+  seg->sourceIs(loc1);
+  ASSERT_TRUE(seg->source() == loc1);
+}
+
+TEST(Segment, destinationIs) 
+{
+  Location::Ptr loc1 = Customer::CustomerIs("loc1");
+  Location::Ptr loc2 = Customer::CustomerIs("loc2");
+  Segment::Ptr seg = BoatSegment::BoatSegmentIs("seg");
+  seg->destinationIs(loc1);
+  ASSERT_TRUE(seg->destination() == loc1);
+}
+
+TEST(Segemtn, name)
+{
+  Segment::Ptr seg1 = BoatSegment::BoatSegmentIs("seg1");
+  ASSERT_TRUE(seg1->name() == "seg1");
+}
+
+TEST(Segment, Expedite) 
+{
+  Segment::Ptr seg1 = BoatSegment::BoatSegmentIs("seg1");
+  seg1->expediteIs(ExpediteSupported);
+  ASSERT_TRUE(seg1->expedite() == ExpediteSupported);
+  seg1->expediteIs(ExpediteNotSupported);
+  ASSERT_TRUE(seg1->expedite() == ExpediteNotSupported);
+}
+
 TEST(Network, NotifieeTest) 
 {
   class Reactor : public Network::Notifiee {
@@ -332,7 +462,6 @@ TEST(FleetDesc, costPerMile)
 
 TEST(Path, segmentNew)
 {
-
   FleetDesc::Ptr fleet = FleetDesc::FleetDescIs();
   fleet->speedIs(5);
   fleet->costPerMileIs(10);
@@ -372,10 +501,138 @@ TEST(Path, segmentNew)
   ASSERT_TRUE(p->cost() == 1050);
   ASSERT_TRUE(p->length() == 40);
   ASSERT_TRUE(p->time() == 8);
+
+  ASSERT_TRUE(p->start()->name() == "pa");
+  ASSERT_TRUE(p->end()->name() == "sf");
 }
 
-TEST(Path, ExpediteSupported) 
+TEST(Path, Expedite)
 {
+  Path::Ptr p = Path::PathIs();
+  p->expediteIs(ExpediteSupported);
+  ASSERT_TRUE(p->expedite() == ExpediteSupported);
+  p->expediteIs(ExpediteNotSupported);
+  ASSERT_TRUE(p->expedite() == ExpediteNotSupported);
+}
+
+TEST(Path, ExpeditePath) 
+{
+  FleetDesc::Ptr fleet = FleetDesc::FleetDescIs();
+  fleet->speedIs(5);
+  fleet->costPerMileIs(10);
+
+  Location::Ptr loc1 = Customer::CustomerIs("pa");
+  Location::Ptr loc2 = Port::PortIs("redwood");
+  Location::Ptr loc3 = BoatTerminal::BoatTerminalIs("sf");
+
+  Segment::Ptr seg1 = TruckSegment::TruckSegmentIs("280");
+  seg1->sourceIs(loc1);
+  seg1->destinationIs(loc2);
+  seg1->difficultyIs(2.0);
+  seg1->lengthIs(15);
+  seg1->expediteIs(ExpediteSupported);
+
+  Segment::Ptr seg2 = BoatSegment::BoatSegmentIs("bay");
+  seg2->sourceIs(loc2);
+  seg2->destinationIs(loc3);
+  seg2->difficultyIs(3.0);
+  seg2->lengthIs(25);
+  seg2->expediteIs(ExpediteSupported);
+
+  Segment::Ptr seg3 = PlaneSegment::PlaneSegmentIs("skyline");
+  seg3->sourceIs(loc2);
+  seg3->destinationIs(loc1);
+  seg3->expediteIs(ExpediteSupported);
+
+  Path::Ptr p = Path::PathIs();
+  p->expediteIs(ExpediteSupported);
+  p->segmentNew(seg1, fleet);
+  p->segmentNew(seg2, fleet);
+  p->segmentNew(seg3, fleet);
+
+  ASSERT_TRUE(p->segments() == 2);
+
+  Path::SegmentIterator it = p->segmentIter();
+  ASSERT_TRUE(*it == seg1); 
+  it++;
+  ASSERT_TRUE(*it == seg2);
+
+  ASSERT_TRUE(p->cost() == 1575);
+  ASSERT_TRUE(p->length() == 40);
+  ASSERT_TRUE(std::abs(p->time().value() - 6.1538) < 1e-2);
+}
+
+void printPath(Path::Ptr p)
+{
+  string expString = "no";
+  if (p->expedite() == ExpediteSupported)
+    expString = "yes";
+  cout << p->cost().value() << " " << p->time().value() << " "  <<
+    expString << "; ";
+  for (Path::SegmentIterator it = p->segmentIter();
+       it != p->segmentIter() + p->segments();
+       ++it) {
+    Segment::Ptr seg = *it;
+    string rev = "None";
+    if (seg->returnSegment() != NULL) 
+      rev = seg->returnSegment()->name();
+    cout << "(";
+    cout << seg->name() << "," << seg->length().value() << "," << rev; 
+    cout << ")";
+    cout << " ";
+  }
+  cout << endl;
+}
+
+void printPathList(PathList::Ptr plist)
+{
+  for (PathList::PathIterator it = plist->pathIter();
+     it != plist->pathIter() + plist->paths();
+     ++it) {
+    printPath(*it);
+  }
+}
+
+bool pathExists(PathList::Ptr plist, string start, string end, Dollars cost,
+    Hours time, ExpediteOptions exp)
+{
+  for (PathList::PathIterator it = plist->pathIter();
+     it != plist->pathIter() + plist->paths();
+     ++it) {
+    Path::Ptr p = *it;
+    if (p->start()->name() == start &&
+        p->end()->name() == end && 
+        p->cost() == cost &&
+        p->time() == time &&
+        p->expedite() == exp)
+      return true;
+  }
+  return false;
+}
+
+TEST(Connectivity,explore1)
+{
+  Network::Ptr net = prepareNetwork1();
+  Connectivity::Ptr c = Connectivity::ConnectivityIs(net);
+  PathList::Ptr plist = 
+    c->explore(net->location("cent"), 100000, 100000, 100000, ExpediteNotSupported);
+
+  ASSERT_TRUE(pathExists(plist, "cent", "r1", 3000, 14.2857, 
+                         ExpediteNotSupported)); 
+  ASSERT_TRUE(pathExists(plist, "cent", "r1", 4500, 10.989, 
+                         ExpediteSupported)); 
+  ASSERT_TRUE(pathExists(plist, "cent", "t2", 5000, 100, 
+                         ExpediteNotSupported)); 
+  ASSERT_TRUE(pathExists(plist, "cent", "b3", 6000, 50, 
+                       ExpediteNotSupported)); 
+  ASSERT_TRUE(pathExists(plist, "cent", "c1", 3000+8000, 14.2857+33.333, 
+                         ExpediteNotSupported)); 
+  ASSERT_TRUE(pathExists(plist, "cent", "c1", 4500+12000, 10.989+25.641, 
+                         ExpediteSupported)); 
+  ASSERT_TRUE(pathExists(plist, "cent", "r2", 5000+24000, 100+120, 
+                         ExpediteNotSupported)); 
+  ASSERT_TRUE(pathExists(plist, "cent", "bb3", 6000+24000, 50+66.666, 
+                       ExpediteNotSupported)); 
 }
 
 
