@@ -332,6 +332,11 @@ TEST(FleetDesc, costPerMile)
 
 TEST(Path, segmentNew)
 {
+
+  FleetDesc::Ptr fleet = FleetDesc::FleetDescIs();
+  fleet->speedIs(5);
+  fleet->costPerMileIs(10);
+
   Location::Ptr loc1 = Customer::CustomerIs("pa");
   Location::Ptr loc2 = Port::PortIs("redwood");
   Location::Ptr loc3 = BoatTerminal::BoatTerminalIs("sf");
@@ -351,11 +356,29 @@ TEST(Path, segmentNew)
   Segment::Ptr seg3 = PlaneSegment::PlaneSegmentIs("skyline");
   seg3->sourceIs(loc2);
   seg3->destinationIs(loc1);
+
+  Path::Ptr p = Path::PathIs();
+  p->segmentNew(seg1, fleet);
+  p->segmentNew(seg2, fleet);
+  p->segmentNew(seg3, fleet);
+
+  ASSERT_TRUE(p->segments() == 2);
+
+  Path::SegmentIterator it = p->segmentIter();
+  ASSERT_TRUE(*it == seg1); 
+  it++;
+  ASSERT_TRUE(*it == seg2);
+
+  ASSERT_TRUE(p->cost() == 1050);
+  ASSERT_TRUE(p->length() == 40);
+  ASSERT_TRUE(p->time() == 8);
 }
 
 TEST(Path, ExpediteSupported) 
 {
 }
+
+
 
 
 

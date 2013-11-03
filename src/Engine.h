@@ -23,34 +23,57 @@ using std::map;
 
 namespace Shipping {
 
-
-class Hours : Ordinal<Hours, unsigned int> {
+class DifficultyLevel : public Ordinal<DifficultyLevel, float> 
+{
 public:
-	Hours(unsigned int _minutes) : Ordinal<Hours, unsigned int>(_minutes) {}
+	DifficultyLevel(float difficulty) : Ordinal<DifficultyLevel, float>(difficulty) {
+		if (difficulty < 1.0 || difficulty > 5.0) {
+			throw "illegal difficulty value";
+		}
+	}
+
+	bool operator==(const DifficultyLevel& v) const
+	{ return std::abs(Nominal::value_ - v.value_) < 1e-2; }
+};
+
+class Hours : public Ordinal<Hours, float> {
+public:
+	Hours(float _hours) : Ordinal<Hours, float>(_hours) {}
 
 	bool operator==(const Hours& v) const
-	{ return Nominal::value_ == v.value_; }
-};
+	{ return std::abs(Nominal::value_ - v.value_) < 1e-2; }
 
-class Miles : Ordinal<Miles, unsigned int> {
-public:
-	Miles(unsigned int _miles) : Ordinal<Miles, unsigned int>(_miles) {}
-
-	bool operator==(const Miles& v) const
-	{ return Nominal::value_ == v.value_; }
+	Hours operator+=(const Hours& v)
+	{ return (Nominal::value_ += v.value_); }
 
 };
 
-class Dollars : Ordinal<Dollars, float> {
+class Dollars : public Ordinal<Dollars, float> {
 public:
 	Dollars(float _dollars) : Ordinal<Dollars, float>(_dollars) {}
 		
 	bool operator==(const Dollars& v) const
 	{ return std::abs(Nominal::value_ - v.value_) < 1e-2; }
 
+	Dollars operator+=(const Dollars& v)
+	{ return (Nominal::value_ += v.value_); }
+
 };
 
-class MilesPerHour : Ordinal<MilesPerHour, float> {
+class DollarsPerMile : public Ordinal<DollarsPerMile, float> {
+public:
+	DollarsPerMile(float _dollarsPerMile) : 
+		Ordinal<DollarsPerMile, float>(_dollarsPerMile) {}
+		
+	bool operator==(const DollarsPerMile& v) const
+	{ return std::abs(Nominal::value_ - v.value_) < 1e-2; }
+
+	DollarsPerMile operator*(const DifficultyLevel& v) const
+	{ return this->value() * v.value(); }
+
+};
+
+class MilesPerHour : public Ordinal<MilesPerHour, float> {
 public:
 	MilesPerHour(float _milesPerHour) : Ordinal<MilesPerHour, float>(_milesPerHour) {}
 
@@ -58,7 +81,26 @@ public:
 	{ return std::abs(Nominal::value_ - v.value_) < 1e-2; }
 };
 
-class PackageCapacity : Ordinal<PackageCapacity, unsigned int> {
+class Miles : public Ordinal<Miles, unsigned int> {
+public:
+	Miles(unsigned int _miles) : Ordinal<Miles, unsigned int>(_miles) {}
+
+	bool operator==(const Miles& v) const
+	{ return Nominal::value_ == v.value_; }
+
+	Dollars operator*(const DollarsPerMile& v) const
+	{ return v.value() * this->value(); }
+
+	Hours operator/(const MilesPerHour& v) const
+	{ return this->value() / v.value(); }
+
+	Miles operator+=(const Miles& v)
+	{ return Nominal::value_ += v.value_; }
+	
+};
+
+
+class PackageCapacity : public Ordinal<PackageCapacity, unsigned int> {
 public:
 	PackageCapacity(unsigned int _capacity) : Ordinal<PackageCapacity, unsigned int>(_capacity) {}
 
@@ -84,6 +126,7 @@ enum LocationType {
 	BoatTerminalLocation,
 	PlaneTerminalLocation
 };
+
 
 class Segment;
 
@@ -219,18 +262,6 @@ public:
 
    };
 
-	class DifficultyLevel : Ordinal<DifficultyLevel, float> 
-	{
-	public:
-		DifficultyLevel(float difficulty) : Ordinal<DifficultyLevel, float>(difficulty) {
-			if (difficulty < 1.0 || difficulty > 5.0) {
-				throw "illegal difficulty value";
-			}
-		}
-
-		bool operator==(const DifficultyLevel& v) const
-		{ return std::abs(Nominal::value_ - v.value_) < 1e-2; }
-	};
 
   // static Segment::Ptr SegmentIs(string name, TransportationMode mode) {
   // 	Ptr m = new Segment(name, mode);
@@ -254,7 +285,7 @@ public:
 	void difficultyIs(DifficultyLevel _difficulty) { difficulty_ = _difficulty; } 
 
 	ExpediteOptions expedite() const { return expedite_; }
-	void expediteIs(ExpediteOptions _expedite) { expedite_ = _expedite; }
+	void expediteIs(ExpediteOptions _expedite);
 
 	Segment::Ptr returnSegment() const { return return_segment_; }
 	void returnSegmentIs(Ptr seg);
@@ -347,15 +378,15 @@ public:
 	PackageCapacity capacity() const { return capacity_; }
 	void capacityIs(PackageCapacity _capacity);
 
-	Dollars costPerMile() const { return costPerMile_; }
-	void costPerMileIs(Dollars _costPerMile);
+	DollarsPerMile costPerMile() const { return costPerMile_; }
+	void costPerMileIs(DollarsPerMile _costPerMile);
 
 protected:
 	FleetDesc() : speed_(0), capacity_(0), costPerMile_(0) {}
 	string name_;
 	MilesPerHour speed_;
 	PackageCapacity capacity_;
-	Dollars costPerMile_;
+	DollarsPerMile costPerMile_;
 
 };
 
@@ -397,62 +428,6 @@ class TruckFleetDesc : public FleetDesc {
 protected:
 	TruckFleetDesc() : FleetDesc() {}
 };
-
-
-class Path : public Fwk::PtrInterface<Path> {
-
-public:
-	typedef Fwk::Ptr<Path> Ptr;
-	typedef vector<Segment::Ptr>::iterator SegmentIterator;
-
-	static Ptr PathIs() {
-		Ptr m = new Path();
-		return m;
-	}
-
-	void segmentNew(Segment::Ptr);
-	unsigned segments() { return segments_.size(); }
-	SegmentIterator segmentIter() { return segments_.begin(); }
-
-	ExpediteOptions expedite() const;
-	void expediteIs(ExpediteOptions _expedite);
-
-	Dollars cost() const { return cost_; }
-
-	Miles distance() const { return distance_; }
-
-protected:
-	Path() : start_loc_(NULL), end_loc_(NULL), cost_(0), time_(0), distance_(0) {}
-	Location::Ptr start_loc_;
-	Location::Ptr end_loc_;
-	Dollars cost_;
-	Hours time_;
-	Miles distance_;
-	ExpediteOptions expedite_;
-	vector<Segment::Ptr> segments_;
-
-};
-
-class PathList : public Fwk::PtrInterface<PathList> {
-public:
-	typedef Fwk::Ptr<PathList> Ptr;
-	typedef vector<Path::Ptr>::iterator PathIterator;
-
-	static Ptr PathListNew() {
-		Ptr m = new PathList();
-		return m;
-	}
-
-	unsigned paths() const { return paths_.size(); }
-	vector<Path::Ptr>::iterator pathIter() { return paths_.begin(); }
-	void pathNew(Path::Ptr);
-
-protected:
-	PathList() {}
-	vector<Path::Ptr> paths_;
-
-};
-
 
 class Network : public Fwk::PtrInterface<Network> {
 public:
@@ -634,6 +609,63 @@ protected:
 
 	NetworkReactor::Ptr net_reactor_;
 	vector<SegmentReactor::Ptr> seg_reactor_;
+
+};
+
+class Path : public Fwk::PtrInterface<Path> {
+
+public:
+	typedef Fwk::Ptr<Path> Ptr;
+	typedef vector<Segment::Ptr>::iterator SegmentIterator;
+
+	static Ptr PathIs() {
+		Ptr m = new Path();
+		return m;
+	}
+
+	void segmentNew(Segment::Ptr, FleetDesc::Ptr);
+	unsigned segments() { return segments_.size(); }
+	SegmentIterator segmentIter() { return segments_.begin(); }
+
+	ExpediteOptions expedite() const;
+	void expediteIs(ExpediteOptions _expedite);
+
+	Dollars cost() const { return cost_; }
+
+	Miles length() const { return length_; }
+
+	Hours time() const { return time_; }
+
+protected:
+	Path() : start_loc_(NULL), end_loc_(NULL), cost_(0), time_(0), length_(0),
+		expedite_(ExpediteNotSupported) {}
+	Location::Ptr start_loc_;
+	Location::Ptr end_loc_;
+	Dollars cost_;
+	Hours time_;
+	Miles length_;
+	ExpediteOptions expedite_;
+	vector<Segment::Ptr> segments_;
+
+};
+
+class PathList : public Fwk::PtrInterface<PathList> {
+public:
+	typedef Fwk::Ptr<PathList> Ptr;
+	typedef vector<Path::Ptr>::iterator PathIterator;
+
+	static Ptr PathListNew() {
+		Ptr m = new PathList();
+		return m;
+	}
+
+	unsigned paths() const { return paths_.size(); }
+	vector<Path::Ptr>::iterator pathIter() { return paths_.begin(); }
+	void pathNew(Path::Ptr);
+
+protected:
+	PathList() {}
+	vector<Path::Ptr> paths_;
 
 };
 

@@ -45,7 +45,7 @@ void Segment::returnSegmentIs(Segment::Ptr seg) {
 }
 
 Segment::Segment(string name, TransportationMode mode) : name_(name), 
-	length_(0), difficulty_(1.0), mode_(mode) {} 
+	length_(0), difficulty_(1.0), expedite_(ExpediteNotSupported), mode_(mode) {} 
 
 
 void Segment::Notifiee::notifierIs(const Segment::Ptr _notifier) {
@@ -195,7 +195,7 @@ void FleetDesc::capacityIs(PackageCapacity _capacity){
 	capacity_ = _capacity;
 }
 
-void FleetDesc::costPerMileIs(Dollars _costPerMile){
+void FleetDesc::costPerMileIs(DollarsPerMile _costPerMile){
 	if (costPerMile_ == _costPerMile) return;
 	costPerMile_ = _costPerMile;
 }
@@ -333,19 +333,26 @@ void Path::expediteIs(ExpediteOptions _expedite) {
 	}
 }
 
-void Path::segmentNew(Segment::Ptr seg) {
+void Path::segmentNew(Segment::Ptr seg, FleetDesc::Ptr fleet) {
 	if (seg->expedite() != expedite_)
 		return;
 
-	if (end_loc_ == NULL || 
-			end_loc_ == seg->source()) {
-		segments_.push_back(seg);
-		end_loc_ = seg->destination();
+	if (end_loc_ != NULL && 
+			end_loc_ != seg->source()) {
+		return;	
 	}
+
+	segments_.push_back(seg);
+	end_loc_ = seg->destination();
 
 	if (start_loc_ == NULL) {
 		start_loc_ = seg->source();
 	}
+
+	cost_ += seg->length() * (fleet->costPerMile() * seg->difficulty());
+	time_ += seg->length() / fleet->speed();
+	length_ += seg->length(); 
+
 }
 
 void PathList::pathNew(Path::Ptr p) {
