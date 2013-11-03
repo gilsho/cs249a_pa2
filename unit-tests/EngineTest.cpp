@@ -594,7 +594,7 @@ void printPathList(PathList::Ptr plist)
 }
 
 bool pathExists(PathList::Ptr plist, string start, string end, Dollars cost,
-    Hours time, ExpediteOptions exp)
+    Hours time, Miles length, ExpediteOptions exp)
 {
   for (PathList::PathIterator it = plist->pathIter();
      it != plist->pathIter() + plist->paths();
@@ -604,39 +604,161 @@ bool pathExists(PathList::Ptr plist, string start, string end, Dollars cost,
         p->end()->name() == end && 
         p->cost() == cost &&
         p->time() == time &&
+        p->length() == length &&
         p->expedite() == exp)
       return true;
   }
   return false;
 }
 
-TEST(Connectivity,explore1)
+TEST(Connectivity,exploreAll)
+{
+  Network::Ptr net = prepareNetwork1();
+  Connectivity::Ptr c = Connectivity::ConnectivityIs(net);
+  Dollars maxCost = 100000;
+  Hours maxTime = 100000;
+  Miles maxLength = 100000;
+  PathList::Ptr plist = 
+    c->explore(net->location("cent"), maxLength, maxCost, maxTime, 
+               ExpediteNotSupported);
+  
+  ASSERT_TRUE(pathExists(plist, "cent", "r1", 3000, 14.2857, 100,
+                         ExpediteNotSupported)); 
+  ASSERT_TRUE(pathExists(plist, "cent", "r1", 4500, 10.989, 100,
+                         ExpediteSupported)); 
+  ASSERT_TRUE(pathExists(plist, "cent", "t2", 5000, 100, 500,
+                         ExpediteNotSupported)); 
+  ASSERT_TRUE(pathExists(plist, "cent", "b3", 6000, 50, 300,
+                       ExpediteNotSupported)); 
+  ASSERT_TRUE(pathExists(plist, "cent", "c1", 3000+8000, 14.2857+33.333, 100+200,
+                         ExpediteNotSupported)); 
+  ASSERT_TRUE(pathExists(plist, "cent", "c1", 4500+12000, 10.989+25.641, 100+200,
+                         ExpediteSupported)); 
+  ASSERT_TRUE(pathExists(plist, "cent", "r2", 5000+24000, 100+120, 500+600,
+                         ExpediteNotSupported)); 
+  ASSERT_TRUE(pathExists(plist, "cent", "bb3", 6000+24000, 50+66.666, 300+400,
+                       ExpediteNotSupported)); 
+  ASSERT_TRUE(plist->paths() == 8);
+}
+
+TEST(Connectivity,exploreCostFilter)
+{
+  Network::Ptr net = prepareNetwork1();
+  Connectivity::Ptr c = Connectivity::ConnectivityIs(net);
+  Dollars maxCost = 17000;
+  Hours maxTime = 100000;
+  Miles maxLength = 100000;
+  PathList::Ptr plist = 
+    c->explore(net->location("cent"), maxLength, maxCost, maxTime, 
+               ExpediteNotSupported);
+
+  ASSERT_TRUE(pathExists(plist, "cent", "r1", 3000, 14.2857, 100,
+                         ExpediteNotSupported)); 
+  ASSERT_TRUE(pathExists(plist, "cent", "r1", 4500, 10.989, 100,
+                         ExpediteSupported)); 
+  ASSERT_TRUE(pathExists(plist, "cent", "t2", 5000, 100, 500,
+                         ExpediteNotSupported)); 
+  ASSERT_TRUE(pathExists(plist, "cent", "b3", 6000, 50, 300,
+                       ExpediteNotSupported)); 
+  ASSERT_TRUE(pathExists(plist, "cent", "c1", 3000+8000, 14.2857+33.333, 100+200,
+                         ExpediteNotSupported)); 
+  ASSERT_TRUE(pathExists(plist, "cent", "c1", 4500+12000, 10.989+25.641, 100+200,
+                         ExpediteSupported)); 
+  ASSERT_TRUE(plist->paths() == 6);
+}
+
+TEST(Connectivity,exploreTimeFilter)
+{
+  Network::Ptr net = prepareNetwork1();
+  Connectivity::Ptr c = Connectivity::ConnectivityIs(net);
+  Dollars maxCost = 100000;
+  Hours maxTime = 48;
+  Miles maxLength = 100000;
+  PathList::Ptr plist = 
+    c->explore(net->location("cent"), maxLength, maxCost, maxTime, 
+               ExpediteNotSupported);
+
+  ASSERT_TRUE(pathExists(plist, "cent", "r1", 3000, 14.2857, 100,
+                         ExpediteNotSupported)); 
+  ASSERT_TRUE(pathExists(plist, "cent", "r1", 4500, 10.989, 100,
+                         ExpediteSupported)); 
+  ASSERT_TRUE(pathExists(plist, "cent", "c1", 3000+8000, 14.2857+33.333, 100+200,
+                         ExpediteNotSupported)); 
+  ASSERT_TRUE(pathExists(plist, "cent", "c1", 4500+12000, 10.989+25.641, 100+200,
+                         ExpediteSupported));  
+  ASSERT_TRUE(plist->paths() == 4);
+}
+
+
+TEST(Connectivity,exploreExpediteFilter)
+{
+  Network::Ptr net = prepareNetwork1();
+  Connectivity::Ptr c = Connectivity::ConnectivityIs(net);
+  Dollars maxCost = 100000;
+  Hours maxTime = 100000;
+  Miles maxLength = 100000;
+  PathList::Ptr plist = 
+    c->explore(net->location("cent"), maxLength, maxCost, maxTime, 
+               ExpediteSupported);
+
+  ASSERT_TRUE(pathExists(plist, "cent", "r1", 4500, 10.989, 100,
+                         ExpediteSupported)); 
+  ASSERT_TRUE(pathExists(plist, "cent", "c1", 4500+12000, 10.989+25.641, 100+200,
+                         ExpediteSupported)); 
+  ASSERT_TRUE(plist->paths() == 2); 
+}
+
+TEST(Connectivity,exploreLengthFilter)
+{
+  Network::Ptr net = prepareNetwork1();
+  Connectivity::Ptr c = Connectivity::ConnectivityIs(net);
+  Dollars maxCost = 100000;
+  Hours maxTime = 100000;
+  Miles maxLength = 350;
+  PathList::Ptr plist = 
+    c->explore(net->location("cent"), maxLength, maxCost, maxTime, 
+               ExpediteNotSupported);
+
+  ASSERT_TRUE(pathExists(plist, "cent", "r1", 3000, 14.2857, 100,
+                         ExpediteNotSupported)); 
+  ASSERT_TRUE(pathExists(plist, "cent", "r1", 4500, 10.989, 100,
+                         ExpediteSupported)); 
+  ASSERT_TRUE(pathExists(plist, "cent", "b3", 6000, 50, 300,
+                       ExpediteNotSupported)); 
+  ASSERT_TRUE(pathExists(plist, "cent", "c1", 3000+8000, 14.2857+33.333, 100+200,
+                         ExpediteNotSupported)); 
+  ASSERT_TRUE(pathExists(plist, "cent", "c1", 4500+12000, 10.989+25.641, 100+200,
+                         ExpediteSupported)); 
+  ASSERT_TRUE(plist->paths() == 5);
+}
+
+
+TEST(Connectivity,connect1)
 {
   Network::Ptr net = prepareNetwork1();
   Connectivity::Ptr c = Connectivity::ConnectivityIs(net);
   PathList::Ptr plist = 
-    c->explore(net->location("cent"), 100000, 100000, 100000, ExpediteNotSupported);
+    c->connect(net->location("cent"), net->location("c1"));
 
-  ASSERT_TRUE(pathExists(plist, "cent", "r1", 3000, 14.2857, 
+  ASSERT_TRUE(pathExists(plist, "cent", "c1", 3000+8000, 14.2857+33.333, 100+200,
                          ExpediteNotSupported)); 
-  ASSERT_TRUE(pathExists(plist, "cent", "r1", 4500, 10.989, 
+  ASSERT_TRUE(pathExists(plist, "cent", "c1", 4500+12000, 10.989+25.641, 100+200,
                          ExpediteSupported)); 
-  ASSERT_TRUE(pathExists(plist, "cent", "t2", 5000, 100, 
-                         ExpediteNotSupported)); 
-  ASSERT_TRUE(pathExists(plist, "cent", "b3", 6000, 50, 
-                       ExpediteNotSupported)); 
-  ASSERT_TRUE(pathExists(plist, "cent", "c1", 3000+8000, 14.2857+33.333, 
-                         ExpediteNotSupported)); 
-  ASSERT_TRUE(pathExists(plist, "cent", "c1", 4500+12000, 10.989+25.641, 
-                         ExpediteSupported)); 
-  ASSERT_TRUE(pathExists(plist, "cent", "r2", 5000+24000, 100+120, 
-                         ExpediteNotSupported)); 
-  ASSERT_TRUE(pathExists(plist, "cent", "bb3", 6000+24000, 50+66.666, 
-                       ExpediteNotSupported)); 
+  ASSERT_TRUE(plist->paths() == 2);
 }
 
 
+TEST(Connectivity,connect2)
+{
+  Network::Ptr net = prepareNetwork1();
+  Connectivity::Ptr c = Connectivity::ConnectivityIs(net);
+  PathList::Ptr plist = 
+    c->connect(net->location("cent"), net->location("r2"));
 
+  ASSERT_TRUE(pathExists(plist, "cent", "r2", 5000+24000, 100+120, 500+600,
+                         ExpediteNotSupported)); 
+  ASSERT_TRUE(plist->paths() == 1);
+}
 
 
 

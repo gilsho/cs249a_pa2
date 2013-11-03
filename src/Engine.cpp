@@ -457,14 +457,17 @@ PathList::Ptr Connectivity::explore(Location::Ptr start, Miles length,
 			it != start->segmentIterator() + start->segments();
 			++it) {
 		Segment::Ptr seg = *it;
-		Path::Ptr p = Path::PathIs();
-		p->expediteIs(ExpediteNotSupported);
-		p->segmentNew(seg, net_->fleet(seg->mode()));
-		// cout << "seg->source(): " << seg->source()->name() <<
-		// 	", seg->destination(): " << seg->destination()->name() << endl;
-		// cout << "path->start(): " << p->start()->name() << ", p->end(): "
-		// 	<< p->end()->name() << endl << endl; 
-		toExplore.push(p);
+
+		if (expedite == ExpediteNotSupported) {
+			Path::Ptr p = Path::PathIs();
+			p->expediteIs(ExpediteNotSupported);
+			p->segmentNew(seg, net_->fleet(seg->mode()));
+			// cout << "seg->source(): " << seg->source()->name() <<
+			// 	", seg->destination(): " << seg->destination()->name() << endl;
+			// cout << "path->start(): " << p->start()->name() << ", p->end(): "
+			// 	<< p->end()->name() << endl << endl; 
+			toExplore.push(p);
+		}
 
 		//expedited paths are separate paths
 		if (seg->expedite() == ExpediteSupported) {
@@ -489,9 +492,43 @@ PathList::Ptr Connectivity::explore(Location::Ptr start, Miles length,
 	return plist;
 }
 
-PathList::Ptr Connectivity::connect(Location::Ptr start, Location::Ptr end,
-																		ExpediteOptions expedite) 
+PathList::Ptr Connectivity::connect(Location::Ptr start, Location::Ptr end) 
 {
+	PathList::Ptr plist = PathList::PathListNew();
+	if (start == end) {
+		return plist;
+	}
+
+	queue<Path::Ptr> toExplore;
+
+	for(Location::SegmentIterator it = start->segmentIterator();
+			it != start->segmentIterator() + start->segments();
+			++it) {
+		Segment::Ptr seg = *it;
+		Path::Ptr p = Path::PathIs();
+		p->expediteIs(ExpediteNotSupported);
+		p->segmentNew(seg, net_->fleet(seg->mode()));
+		toExplore.push(p);
+
+		//expedited paths are separate paths
+		if (seg->expedite() == ExpediteSupported) {
+			Path::Ptr pexp = Path::PathIs();
+			pexp->expediteIs(ExpediteSupported);
+			pexp->segmentNew(seg, net_->fleet(seg->mode()));
+			toExplore.push(pexp);
+		}
+	}
+
+	while(!toExplore.empty()) {
+		Path::Ptr p = toExplore.front();
+		toExplore.pop();
+		if (p->end() == end) {
+			plist->pathNew(p);
+		}
+		enqueueNextSegments(toExplore, p, ExpediteNotSupported);
+	}
+
+	return plist;
 }
 
 } /* end namespace */

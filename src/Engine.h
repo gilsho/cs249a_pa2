@@ -661,9 +661,7 @@ public:
 	Location::Ptr start() const {return start_loc_; }
 
 	Dollars cost() const { return cost_; }
-
 	Miles length() const { return length_; }
-
 	Hours time() const { return time_; }
 
 protected:
@@ -714,8 +712,7 @@ public:
 	Network::Ptr network() const { return net_; }
 	PathList::Ptr explore(Location::Ptr start, Miles distance, Dollars cost, 
 												Hours time, ExpediteOptions expedite);
-	PathList::Ptr connect(Location::Ptr start, Location::Ptr end,
-														ExpediteOptions expedite);
+	PathList::Ptr connect(Location::Ptr start, Location::Ptr end);
 
 protected:
 	Connectivity(Network::Ptr net) { net_ = net; }
