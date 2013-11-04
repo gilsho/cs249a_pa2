@@ -59,6 +59,9 @@ void Segment::returnSegmentIs(Segment::Ptr seg) {
 	return_segment_->return_segment_ = this;
 	destination_ = return_segment_->source_;
 	return_segment_->destination_ = source_;
+	// cout << "destination of " << name_ << " " << destination_->name() << endl;
+	// cout << "destination of " << return_segment_->name_ << " " << return_segment_->destination_->name() << endl;
+
 
 }
 
@@ -467,16 +470,15 @@ PathList::Ptr Connectivity::explore(Location::Ptr start, Miles length,
 			++it) {
 		Segment::Ptr seg = *it;
 
-		if (expedite == ExpediteNotSupported) {
-			Path::Ptr p = Path::PathIs();
-			p->expediteIs(ExpediteNotSupported);
-			p->segmentNew(seg, net_->fleet(seg->mode()));
-			// cout << "seg->source(): " << seg->source()->name() <<
-			// 	", seg->destination(): " << seg->destination()->name() << endl;
-			// cout << "path->start(): " << p->start()->name() << ", p->end(): "
-			// 	<< p->end()->name() << endl << endl; 
-			toExplore.push(p);
-		}
+		// cout << seg->name() << endl;
+		// cout << ": seg->source(): " << seg->source()->name() <<
+		// 	", seg->destination(): " << seg->destination()->name() << endl;
+		Path::Ptr p = Path::PathIs();
+		p->expediteIs(ExpediteNotSupported);
+		p->segmentNew(seg, net_->fleet(seg->mode()));
+		// cout << "path->start(): " << p->start()->name() << ", p->end(): "
+		// 	<< p->end()->name() << endl << endl; 
+		toExplore.push(p);
 	}
 
 	while(!toExplore.empty()) {
