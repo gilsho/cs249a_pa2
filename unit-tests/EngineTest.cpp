@@ -562,37 +562,6 @@ TEST(Path, ExpeditePath)
   ASSERT_TRUE(std::abs(p->time().value() - 6.1538) < 1e-2);
 }
 
-void printPath(Path::Ptr p)
-{
-  string expString = "no";
-  if (p->expedite() == ExpediteSupported)
-    expString = "yes";
-  cout << p->cost().value() << " " << p->time().value() << " "  <<
-    expString << "; ";
-  for (Path::SegmentIterator it = p->segmentIter();
-       it != p->segmentIter() + p->segments();
-       ++it) {
-    Segment::Ptr seg = *it;
-    string rev = "None";
-    if (seg->returnSegment() != NULL) 
-      rev = seg->returnSegment()->name();
-    cout << "(";
-    cout << seg->name() << "," << seg->length().value() << "," << rev; 
-    cout << ")";
-    cout << " ";
-  }
-  cout << endl;
-}
-
-void printPathList(PathList::Ptr plist)
-{
-  for (PathList::PathIterator it = plist->pathIter();
-     it != plist->pathIter() + plist->paths();
-     ++it) {
-    printPath(*it);
-  }
-}
-
 bool pathExists(PathList::Ptr plist, string start, string end, Dollars cost,
     Hours time, Miles length, ExpediteOptions exp)
 {
@@ -624,21 +593,17 @@ TEST(Connectivity,exploreAll)
   
   ASSERT_TRUE(pathExists(plist, "cent", "r1", 3000, 14.2857, 100,
                          ExpediteNotSupported)); 
-  ASSERT_TRUE(pathExists(plist, "cent", "r1", 4500, 10.989, 100,
-                         ExpediteSupported)); 
   ASSERT_TRUE(pathExists(plist, "cent", "t2", 5000, 100, 500,
                          ExpediteNotSupported)); 
   ASSERT_TRUE(pathExists(plist, "cent", "b3", 6000, 50, 300,
                        ExpediteNotSupported)); 
   ASSERT_TRUE(pathExists(plist, "cent", "c1", 3000+8000, 14.2857+33.333, 100+200,
                          ExpediteNotSupported)); 
-  ASSERT_TRUE(pathExists(plist, "cent", "c1", 4500+12000, 10.989+25.641, 100+200,
-                         ExpediteSupported)); 
   ASSERT_TRUE(pathExists(plist, "cent", "r2", 5000+24000, 100+120, 500+600,
                          ExpediteNotSupported)); 
   ASSERT_TRUE(pathExists(plist, "cent", "bb3", 6000+24000, 50+66.666, 300+400,
                        ExpediteNotSupported)); 
-  ASSERT_TRUE(plist->paths() == 8);
+  ASSERT_TRUE(plist->paths() == 6);
 }
 
 TEST(Connectivity,exploreCostFilter)
@@ -654,17 +619,13 @@ TEST(Connectivity,exploreCostFilter)
 
   ASSERT_TRUE(pathExists(plist, "cent", "r1", 3000, 14.2857, 100,
                          ExpediteNotSupported)); 
-  ASSERT_TRUE(pathExists(plist, "cent", "r1", 4500, 10.989, 100,
-                         ExpediteSupported)); 
   ASSERT_TRUE(pathExists(plist, "cent", "t2", 5000, 100, 500,
                          ExpediteNotSupported)); 
   ASSERT_TRUE(pathExists(plist, "cent", "b3", 6000, 50, 300,
                        ExpediteNotSupported)); 
   ASSERT_TRUE(pathExists(plist, "cent", "c1", 3000+8000, 14.2857+33.333, 100+200,
-                         ExpediteNotSupported)); 
-  ASSERT_TRUE(pathExists(plist, "cent", "c1", 4500+12000, 10.989+25.641, 100+200,
-                         ExpediteSupported)); 
-  ASSERT_TRUE(plist->paths() == 6);
+                         ExpediteNotSupported));  
+  ASSERT_TRUE(plist->paths() == 4);
 }
 
 TEST(Connectivity,exploreTimeFilter)
@@ -680,33 +641,11 @@ TEST(Connectivity,exploreTimeFilter)
 
   ASSERT_TRUE(pathExists(plist, "cent", "r1", 3000, 14.2857, 100,
                          ExpediteNotSupported)); 
-  ASSERT_TRUE(pathExists(plist, "cent", "r1", 4500, 10.989, 100,
-                         ExpediteSupported)); 
   ASSERT_TRUE(pathExists(plist, "cent", "c1", 3000+8000, 14.2857+33.333, 100+200,
                          ExpediteNotSupported)); 
-  ASSERT_TRUE(pathExists(plist, "cent", "c1", 4500+12000, 10.989+25.641, 100+200,
-                         ExpediteSupported));  
-  ASSERT_TRUE(plist->paths() == 4);
+  ASSERT_TRUE(plist->paths() == 2);
 }
 
-
-TEST(Connectivity,exploreExpediteFilter)
-{
-  Network::Ptr net = prepareNetwork1();
-  Connectivity::Ptr c = Connectivity::ConnectivityIs(net);
-  Dollars maxCost = 100000;
-  Hours maxTime = 100000;
-  Miles maxLength = 100000;
-  PathList::Ptr plist = 
-    c->explore(net->location("cent"), maxLength, maxCost, maxTime, 
-               ExpediteSupported);
-
-  ASSERT_TRUE(pathExists(plist, "cent", "r1", 4500, 10.989, 100,
-                         ExpediteSupported)); 
-  ASSERT_TRUE(pathExists(plist, "cent", "c1", 4500+12000, 10.989+25.641, 100+200,
-                         ExpediteSupported)); 
-  ASSERT_TRUE(plist->paths() == 2); 
-}
 
 TEST(Connectivity,exploreLengthFilter)
 {
@@ -721,15 +660,11 @@ TEST(Connectivity,exploreLengthFilter)
 
   ASSERT_TRUE(pathExists(plist, "cent", "r1", 3000, 14.2857, 100,
                          ExpediteNotSupported)); 
-  ASSERT_TRUE(pathExists(plist, "cent", "r1", 4500, 10.989, 100,
-                         ExpediteSupported)); 
   ASSERT_TRUE(pathExists(plist, "cent", "b3", 6000, 50, 300,
                        ExpediteNotSupported)); 
   ASSERT_TRUE(pathExists(plist, "cent", "c1", 3000+8000, 14.2857+33.333, 100+200,
                          ExpediteNotSupported)); 
-  ASSERT_TRUE(pathExists(plist, "cent", "c1", 4500+12000, 10.989+25.641, 100+200,
-                         ExpediteSupported)); 
-  ASSERT_TRUE(plist->paths() == 5);
+  ASSERT_TRUE(plist->paths() == 3);
 }
 
 

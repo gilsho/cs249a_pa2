@@ -40,7 +40,6 @@ void Segment::sourceIs(Location::Ptr _source) {
 void Segment::destinationIs(Location::Ptr _destination) {
 	if (destination_ == _destination) return;
 	destination_ = _destination;
-	destination_->segmentIs(this);
 }
 
 
@@ -57,6 +56,10 @@ void Segment::expediteIs(ExpediteOptions _expedite) {
 void Segment::returnSegmentIs(Segment::Ptr seg) {
 	if (return_segment_ == seg) return;
 	return_segment_ = seg;
+	return_segment_->return_segment_ = this;
+	destination_ = return_segment_->source_;
+	return_segment_->destination_ = source_;
+
 }
 
 Segment::Segment(string name, TransportationMode mode) : name_(name), 
@@ -412,6 +415,10 @@ void PathList::pathNew(Path::Ptr p) {
 bool Connectivity::meetPathConstraints(Path::Ptr p, Miles length, Hours time, 
 																			 Dollars cost)
 {
+	// cout << "p->cost(): " << p->cost().value() << ", maxCost: " << cost.value() << endl; 
+	// cout << "p->time(): " << p->time().value() << ", maxTime: " << time.value() << endl; 
+	// cout << "p->length(): " << p->length().value() << ", maxLength: " << length.value() << endl; 
+
 	if (p->cost() < cost &&
 			p->time() < time &&
 			p->length() < length)
@@ -433,6 +440,8 @@ void Connectivity::enqueueNextSegments(queue<Path::Ptr>& q, Path::Ptr& p,
 				seg->expedite() == ExpediteNotSupported)
 			continue;
 
+		// cout << "considering adding segment from: " << seg->source()->name() 
+		// 	<< " to: " << seg->destination()->name() << endl;
 		Path::Ptr newp = p->clone();
 		unsigned oldSegmentsCount = newp->segments();
 		newp->segmentNew(seg, net_->fleet(seg->mode()));
@@ -468,14 +477,6 @@ PathList::Ptr Connectivity::explore(Location::Ptr start, Miles length,
 			// 	<< p->end()->name() << endl << endl; 
 			toExplore.push(p);
 		}
-
-		//expedited paths are separate paths
-		if (seg->expedite() == ExpediteSupported) {
-			Path::Ptr pexp = Path::PathIs();
-			pexp->expediteIs(ExpediteSupported);
-			pexp->segmentNew(seg, net_->fleet(seg->mode()));
-			toExplore.push(pexp);
-		}
 	}
 
 	while(!toExplore.empty()) {
@@ -508,9 +509,13 @@ PathList::Ptr Connectivity::connect(Location::Ptr start, Location::Ptr end)
 		Path::Ptr p = Path::PathIs();
 		p->expediteIs(ExpediteNotSupported);
 		p->segmentNew(seg, net_->fleet(seg->mode()));
+		// cout << "seg->source(): " << seg->source()->name() <<
+		// 		", seg->destination(): " << seg->destination()->name() << endl;
+		// 	cout << "path->start(): " << p->start()->name() << ", p->end(): "
+		// 		<< p->end()->name() << endl << endl; 
 		toExplore.push(p);
 
-		//expedited paths are separate paths
+		//expedited paths are considered separate paths
 		if (seg->expedite() == ExpediteSupported) {
 			Path::Ptr pexp = Path::PathIs();
 			pexp->expediteIs(ExpediteSupported);
@@ -522,6 +527,8 @@ PathList::Ptr Connectivity::connect(Location::Ptr start, Location::Ptr end)
 	while(!toExplore.empty()) {
 		Path::Ptr p = toExplore.front();
 		toExplore.pop();
+		// cout << "pop: path(" << p->start()->name() << "-> " 
+		// 	<< p->end()->name() << ")" << endl;
 		if (p->end() == end) {
 			plist->pathNew(p);
 		}

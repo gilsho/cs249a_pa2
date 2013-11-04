@@ -52,6 +52,9 @@ public:
 
 class Hours : public Ordinal<Hours, float> {
 public:
+
+	static const Hours max() { return 10e9; }
+
 	Hours(float _hours) : Ordinal<Hours, float>(_hours) {}
 
 	bool operator==(const Hours& v) const
@@ -64,6 +67,9 @@ public:
 
 class Dollars : public Ordinal<Dollars, float> {
 public:
+
+	static const Dollars max() { return 10e9; }
+
 	Dollars(float _dollars) : Ordinal<Dollars, float>(_dollars) {}
 		
 	bool operator==(const Dollars& v) const
@@ -101,12 +107,15 @@ public:
 	{ return (Nominal::value_ *= v.value()); }
 };
 
-class Miles : public Ordinal<Miles, unsigned int> {
+class Miles : public Ordinal<Miles, float> {
 public:
-	Miles(unsigned int _miles) : Ordinal<Miles, unsigned int>(_miles) {}
+
+	static const Miles max() { return 10e9; }
+
+	Miles(float _miles) : Ordinal<Miles, float>(_miles) {}
 
 	bool operator==(const Miles& v) const
-	{ return Nominal::value_ == v.value_; }
+	{ return std::abs(Nominal::value_ - v.value_) < 1e-2; }
 
 	Dollars operator*(const DollarsPerMile& v) const
 	{ return v.value() * this->value(); }
@@ -397,7 +406,7 @@ public:
 	void costPerMileIs(DollarsPerMile _costPerMile);
 
 protected:
-	FleetDesc() : speed_(0), capacity_(0), costPerMile_(0) {}
+	FleetDesc() : speed_(1), capacity_(1), costPerMile_(1) {}
 	string name_;
 	MilesPerHour speed_;
 	PackageCapacity capacity_;
@@ -538,6 +547,8 @@ public:
 	inline EntityCount truckTerminals() { return truck_terminals_; }
 	inline EntityCount boatTerminals() { return boat_terminals_; }
 	inline EntityCount planeTerminals() { return plane_terminals_; }
+	inline EntityCount segments() 
+	{ return truck_segments_ + boat_segments_ + plane_segments_; }
 	inline EntityCount truckSegments() { return truck_segments_; }
 	inline EntityCount boatSegments() { return boat_segments_; }
 	inline EntityCount planeSegments() { return plane_segments_; }
@@ -642,6 +653,7 @@ public:
 		Ptr c = new Path();
 		c->start_loc_ = start_loc_;
 		c->end_loc_ = end_loc_;
+		c->visited_ = visited_;
 		c->cost_ = cost_;
 		c->time_ = time_;
 		c->length_ = length_;

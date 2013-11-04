@@ -69,9 +69,8 @@ public:
     /// instanceNew with a name that is already associated with an instance
     /// through this manager.
     ///
-    virtual Ptr<Instance> instanceNew(
-        const string& name, const string& spec
-    ) = 0;
+    virtual Ptr<Instance> instanceNew(const string& name, 
+        const string& spec) = 0;
 
     ///
     /// Return the instance with the given name or null if there is none.
