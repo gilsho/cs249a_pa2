@@ -31,17 +31,23 @@ void Segment::notifieeDel(Notifiee * n) {
 	}
 }
 
-void Segment::sourceIs(Location::Ptr _source) { 
+void Segment::sourceIs(Location::Ptr _source) {
 	if (source_ == _source) return;
 	source_ = _source;
-	source_->segmentIs(this);
+}
+
+void Segment::returnSegmentIs(Segment::Ptr seg) {
+	if (return_segment_ == seg) return;
+	if (seg->source() != destination_) return;
+	if (seg->destination() != source_) return;
+	return_segment_ = seg;
+	seg->return_segment_ = this;
 }
 
 void Segment::destinationIs(Location::Ptr _destination) {
 	if (destination_ == _destination) return;
 	destination_ = _destination;
 }
-
 
 void Segment::expediteIs(ExpediteOptions _expedite) {
 	if (_expedite == expedite_) return;
@@ -51,18 +57,6 @@ void Segment::expediteIs(ExpediteOptions _expedite) {
 			 ++it) {
 		(*it)->onExpedite();
 	}
-}
-
-void Segment::returnSegmentIs(Segment::Ptr seg) {
-	if (return_segment_ == seg) return;
-	return_segment_ = seg;
-	return_segment_->return_segment_ = this;
-	destination_ = return_segment_->source_;
-	return_segment_->destination_ = source_;
-	// cout << "destination of " << name_ << " " << destination_->name() << endl;
-	// cout << "destination of " << return_segment_->name_ << " " << return_segment_->destination_->name() << endl;
-
-
 }
 
 Segment::Segment(string name, TransportationMode mode) : name_(name), 
@@ -83,6 +77,67 @@ Segment::Notifiee::~Notifiee() {
 	}
 }
 
+void TruckSegment::sourceIs(Location::Ptr _source) { 
+	if (source_ == _source) return;
+	if (_source->type() != CustomerLocation &&
+			_source->type() != PortLocation &&
+			_source->type() != TruckTerminalLocation)
+		return;
+
+	source_ = _source;
+	source_->segmentIs(this);
+}
+
+void TruckSegment::destinationIs(Location::Ptr _destination) { 
+	if (destination_ == _destination) return;
+	if (_destination->type() != CustomerLocation &&
+			_destination->type() != PortLocation &&
+			_destination->type() != TruckTerminalLocation)
+		return;
+
+	destination_ = _destination;
+}
+
+
+void BoatSegment::sourceIs(Location::Ptr _source) { 
+	if (source_ == _source) return;
+	if (_source->type() != CustomerLocation &&
+			_source->type() != PortLocation &&
+			_source->type() != BoatTerminalLocation)
+		return;
+	source_ = _source;
+	source_->segmentIs(this);
+}
+
+void BoatSegment::destinationIs(Location::Ptr _destination) { 
+	if (destination_ == _destination) return;
+	if (_destination->type() != CustomerLocation &&
+			_destination->type() != PortLocation &&
+			_destination->type() != BoatTerminalLocation)
+		return;
+
+	destination_ = _destination;
+}
+
+void PlaneSegment::sourceIs(Location::Ptr _source) { 
+	if (source_ == _source) return;
+	if (_source->type() != CustomerLocation &&
+			_source->type() != PortLocation &&
+			_source->type() != PlaneTerminalLocation)
+		return;
+	source_ = _source;
+	source_->segmentIs(this);
+}
+
+void PlaneSegment::destinationIs(Location::Ptr _destination) { 
+	if (destination_ == _destination) return;
+	if (_destination->type() != CustomerLocation &&
+			_destination->type() != PortLocation &&
+			_destination->type() != PlaneTerminalLocation)
+		return;
+
+	destination_ = _destination;
+}
 
 Segment::Ptr Location::segment(unsigned index) const {
 	if (index < segments_.size()) {
@@ -94,24 +149,24 @@ Segment::Ptr Location::segment(unsigned index) const {
 void Location::segmentIs(Segment::Ptr seg) {
 
 	// make operation idempotent
-	for (vector<Segment::Ptr>::iterator it = segments_.begin();
+	for (SegmentIterator it = segments_.begin();
 			it != segments_.end();
 			++it) {
-		if (*it == seg) {
+		if (*it == seg.ptr()) {
 			return;
 		}
 	}
 
-	segments_.push_back(seg);
+	segments_.push_back(seg.ptr());
 }
 
 
 void Location::segmentDel(Segment::Ptr seg) {
 
-	for (vector<Segment::Ptr>::iterator it = segments_.begin();
+	for (SegmentIterator it = segments_.begin();
 			it != segments_.end();
 			++it) {
-		if (*it == seg) {
+		if (*it == seg.ptr()) {
 			segments_.erase(it);
 			return;
 		}

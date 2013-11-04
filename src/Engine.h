@@ -163,7 +163,7 @@ class Location : public Fwk::PtrInterface<Location> {
 public:
 
   typedef Fwk::Ptr<Location> Ptr;
-  typedef vector<Fwk::Ptr<Segment> >::iterator SegmentIterator;
+  typedef vector<Segment *>::iterator SegmentIterator;
 
 	string name() const { return name_; }
 	void nameIs(string name) { name_ = name;}
@@ -180,7 +180,7 @@ protected:
 	Location(string name, LocationType type) : name_(name), type_(type) {};
 	string name_;
 	LocationType type_;
-  vector<Fwk::Ptr<Segment> > segments_;
+  vector<Segment *> segments_;
 
 //subscribe to notifications from segments that are added to it.
 };
@@ -297,13 +297,13 @@ public:
 	void nameIs(string name) { name_ = name;}
 
 	Location::Ptr source() const { return source_; }
-	void sourceIs(Location::Ptr _source);
+	virtual void sourceIs(Location::Ptr _source);
 
 	Miles length() const { return length_; }
 	void lengthIs(Miles _length) { length_ = _length; }
 
 	Location::Ptr destination() const { return destination_; }
-	void destinationIs(Location::Ptr _destination);
+	virtual void destinationIs(Location::Ptr _destination);
 
 	DifficultyLevel difficulty() const { return difficulty_; }
 	void difficultyIs(DifficultyLevel _difficulty) { difficulty_ = _difficulty; } 
@@ -342,6 +342,10 @@ public:
 		return seg;
 	}
 
+virtual void sourceIs(Location::Ptr _source);
+virtual void destinationIs(Location::Ptr _destination);
+
+
 protected:
 	BoatSegment(string name, TransportationMode mode) : Segment(name, mode) {}
 
@@ -366,6 +370,10 @@ public:
 		return seg;
 	}
 
+virtual void sourceIs(Location::Ptr _source);
+virtual void destinationIs(Location::Ptr _destination);
+
+
 protected:
 	PlaneSegment(string name, TransportationMode mode) : Segment(name, mode) {}
 };
@@ -379,6 +387,9 @@ public:
 		Ptr seg = new TruckSegment(name, TruckMode);
 		return seg;
 	}
+
+virtual void sourceIs(Location::Ptr _source);
+virtual void destinationIs(Location::Ptr _destination);
 
 protected:
 	TruckSegment(string name, TransportationMode mode) : Segment(name, mode) {}

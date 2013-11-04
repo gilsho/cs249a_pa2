@@ -55,7 +55,7 @@ public:
 		void attributeIs(const string& name, const string& v);
 
 protected:
-		Ptr<ManagerImpl> manager_;
+		ManagerImpl *manager_;
 		int segmentNumber(const string& name);
 		Location::Ptr loc;
 
@@ -132,7 +132,7 @@ public:
 		void attributeIs(const string& name, const string& v);
 
 protected:
-		Ptr<ManagerImpl> manager_;
+		ManagerImpl *manager_;
 		Segment::Ptr seg;
 
 };
@@ -219,7 +219,7 @@ public:
 		void attributeIs(const string& name, const string& v) {}
 
 protected:
-		Ptr<ManagerImpl> manager_;
+		ManagerImpl *manager_;
 		Stats::Ptr stats_;
 };
 
@@ -252,7 +252,7 @@ protected:
 		string exploreQuery(Tokenizer& token, Tokenizer& token_end);
 		string connectQuery(Tokenizer& token, Tokenizer& token_end);
 
-		Ptr<ManagerImpl> manager_;
+		ManagerImpl *manager_;
 		Connectivity::Ptr conn_;
 };
 
@@ -423,9 +423,9 @@ void SegmentRep::attributeIs(const string& name, const string& v) {
 
 		else if (name == "return segment") {
 				Segment::Ptr retseg = manager_->network()->segment(v);
-				seg->returnSegmentIs(retseg);
 				seg->destinationIs(retseg->source());
 				retseg->destinationIs(seg->source());
+				seg->returnSegmentIs(retseg);
 		}
 
 		else if (name == "difficulty") {
