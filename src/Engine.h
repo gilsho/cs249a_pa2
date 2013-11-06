@@ -21,6 +21,7 @@
 
 using std::vector;
 using std::cerr;
+using std::endl;
 using std::map;
 using std::queue;
 using std::set;
@@ -40,9 +41,18 @@ public:
 class DifficultyLevel : public Ordinal<DifficultyLevel, float> 
 {
 public:
-	DifficultyLevel(float difficulty) : Ordinal<DifficultyLevel, float>(difficulty) {
-		if (difficulty < 1.0 || difficulty > 5.0) {
-			throw "illegal difficulty value";
+
+	static const float minval = 1.0;
+	static const float maxval = 5.0;
+
+	static const DifficultyLevel min() { return minval; }
+	static const DifficultyLevel max() { return maxval; }
+
+	DifficultyLevel(float difficulty) : 
+		Ordinal<DifficultyLevel, float>(difficulty) {
+		if (difficulty < minval || difficulty > maxval) {
+			cerr << "DifficultLevel: attempted to set illegal value" << endl;
+			this->value_ = minval;
 		}
 	}
 
@@ -53,9 +63,18 @@ public:
 class Hours : public Ordinal<Hours, float> {
 public:
 
-	static const Hours max() { return 10e9; }
+	static const float minval = 0;
+	static const float maxval = 24*365;
+	
+	static const Hours min() { return minval; }
+	static const Hours max() { return maxval; }
 
-	Hours(float _hours) : Ordinal<Hours, float>(_hours) {}
+	Hours(float _hours) : Ordinal<Hours, float>(_hours) {
+		if (_hours < minval || _hours > maxval) {
+			cerr << "Hours: attempted to set illegal value" << endl;
+			this->value_ = minval;
+		}
+	}
 
 	bool operator==(const Hours& v) const
 	{ return std::abs(Nominal::value_ - v.value_) < 1e-2; }
@@ -68,9 +87,18 @@ public:
 class Dollars : public Ordinal<Dollars, float> {
 public:
 
-	static const Dollars max() { return 10e9; }
+	static const float minval = 0;
+	static const float maxval = 10e9;
 
-	Dollars(float _dollars) : Ordinal<Dollars, float>(_dollars) {}
+	static const Dollars min() { return minval; }
+	static const Dollars max() { return maxval; }
+
+	Dollars(float _dollars) : Ordinal<Dollars, float>(_dollars) {
+		if (_dollars < minval || _dollars > maxval) {
+			cerr << "Dollars: attempted to set illegal value" << endl;
+			this->value_ = minval;
+		}
+	}
 		
 	bool operator==(const Dollars& v) const
 	{ return std::abs(Nominal::value_ - v.value_) < 1e-2; }
@@ -82,8 +110,20 @@ public:
 
 class DollarsPerMile : public Ordinal<DollarsPerMile, float> {
 public:
+
+	static const float minval = 0;
+	static const float maxval = 10e5;
+
+	static const DollarsPerMile min() { return minval; }
+	static const DollarsPerMile max() { return maxval; }
+
 	DollarsPerMile(float _dollarsPerMile) : 
-		Ordinal<DollarsPerMile, float>(_dollarsPerMile) {}
+		Ordinal<DollarsPerMile, float>(_dollarsPerMile) {
+			if (_dollarsPerMile < minval || _dollarsPerMile > maxval) {
+				cerr << "DollarsPerMile: attempted to set illegal value" << endl;
+				this->value_ = minval;
+			}
+		}
 		
 	bool operator==(const DollarsPerMile& v) const
 	{ return std::abs(Nominal::value_ - v.value_) < 1e-2; }
@@ -98,7 +138,20 @@ public:
 
 class MilesPerHour : public Ordinal<MilesPerHour, float> {
 public:
-	MilesPerHour(float _milesPerHour) : Ordinal<MilesPerHour, float>(_milesPerHour) {}
+
+	static const float minval = 0;
+	static const float maxval = 10e5;
+
+	static const MilesPerHour min() { return minval; }
+	static const MilesPerHour max() { return maxval; }
+
+	MilesPerHour(float _milesPerHour) : 
+		Ordinal<MilesPerHour, float>(_milesPerHour) {
+		if (_milesPerHour < minval || _milesPerHour > maxval) {
+				cerr << "MilesPerHour: attempted to set illegal value" << endl;
+				this->value_ = minval;
+			}
+		}
 
 	bool operator==(const MilesPerHour& v) const
 	{ return std::abs(Nominal::value_ - v.value_) < 1e-2; }
@@ -110,9 +163,18 @@ public:
 class Miles : public Ordinal<Miles, float> {
 public:
 
-	static const Miles max() { return 10e9; }
+	static const float minval = 0;
+	static const float maxval = 10e5;
 
-	Miles(float _miles) : Ordinal<Miles, float>(_miles) {}
+	static const Miles min() { return minval; }
+	static const Miles max() { return maxval; }
+
+	Miles(float _miles) : Ordinal<Miles, float>(_miles) {
+		if (_miles < minval || _miles > maxval) {
+			cerr << "Miles: attempted to set illegal value" << endl;
+			this->value_ = minval;
+		}
+	}
 
 	bool operator==(const Miles& v) const
 	{ return std::abs(Nominal::value_ - v.value_) < 1e-2; }
@@ -131,7 +193,20 @@ public:
 
 class PackageCapacity : public Ordinal<PackageCapacity, unsigned int> {
 public:
-	PackageCapacity(unsigned int _capacity) : Ordinal<PackageCapacity, unsigned int>(_capacity) {}
+
+	static const float minval = 0;
+	static const float maxval = 10e5;
+	
+	static const PackageCapacity min() { return minval; }
+	static const PackageCapacity max() { return maxval; }
+
+	PackageCapacity(unsigned int _capacity) : 
+		Ordinal<PackageCapacity, unsigned int>(_capacity) {
+			if (_capacity > maxval) {
+				cerr << "MilesPerHour: attempted to set illegal value" << endl;
+				this->value_ = minval;
+			}
+		}
 
 	bool operator==(const PackageCapacity& v) const
 	{ return Nominal::value_ == v.value_; }
@@ -348,17 +423,8 @@ virtual void destinationIs(Location::Ptr _destination);
 
 protected:
 	BoatSegment(string name, TransportationMode mode) : Segment(name, mode) {}
-
-
-	// BoatSegment(Location::Ptr& _source, Location::Ptr& _destination) {
-	// 	if (INSTANCE_OF	(_source.ptr(), TruckTerminal*) ||
-	// 		  INSTANCE_OF(_source.ptr(), PlaneTerminal*) ||
-	// 		  INSTANCE_OF(_destination.ptr(), TruckTerminal*) ||
-	// 		  INSTANCE_OF(_destination.ptr(), PlaneTerminal*)) {
-	// 		throw "illegal boat segment";
-	// 	}
-	// }
 };
+
 //subscribe to notifications from fleet object
 
 class PlaneSegment : public Segment {
@@ -742,7 +808,8 @@ protected:
 	Network::Ptr net_;
 	void enqueueNextSegments(queue<Path::Ptr> & q, Path::Ptr& p, 
 												 	 ExpediteOptions expedite);
-	bool meetPathConstraints(Path::Ptr p, Miles length, Hours time, Dollars cost);
+	bool meetPathConstraints(Path::Ptr p, Miles length, 
+													 Hours time, Dollars cost);
 };
 
 

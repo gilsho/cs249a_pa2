@@ -40,6 +40,7 @@ void Segment::returnSegmentIs(Segment::Ptr seg) {
 	if (return_segment_ == seg) return;
 	if (seg->source() != destination_) return;
 	if (seg->destination() != source_) return;
+	if (seg->mode() != mode_) return;
 	return_segment_ = seg;
 	seg->return_segment_ = this;
 }
@@ -55,12 +56,14 @@ void Segment::expediteIs(ExpediteOptions _expedite) {
 	for (NotifieeIterator it = notifiee_.begin();
 			 it != notifiee_.end();
 			 ++it) {
-		(*it)->onExpedite();
+		try {
+			(*it)->onExpedite();
+		} catch(...) {}
 	}
 }
 
-Segment::Segment(string name, TransportationMode mode) : name_(name), 
-	length_(0), difficulty_(1.0), expedite_(ExpediteNotSupported), mode_(mode) {} 
+Segment::Segment(string name, TransportationMode mode) : name_(name),
+	mode_(mode), length_(0), difficulty_(1.0), expedite_(ExpediteNotSupported) {} 
 
 
 void Segment::Notifiee::notifierIs(const Segment::Ptr _notifier) {
@@ -190,7 +193,9 @@ void Network::segmentIs(Segment::Ptr seg) {
 	for (NotifieeIterator it = notifiee_.begin();
 			 it != notifiee_.end();
 			 ++it) {
-		(*it)->onSegmentNew(seg);
+		try {
+			(*it)->onSegmentNew(seg);
+		} catch(...) {}
 	}
 }
 
@@ -203,7 +208,9 @@ void Network::segmentDel(string name) {
 	for (NotifieeIterator it = notifiee_.begin();
 			 it != notifiee_.end();
 			 ++it) {
-		(*it)->onSegmentDel(itseg->second);
+		try {
+			(*it)->onSegmentDel(itseg->second);
+		} catch(...) {}
 	}
 }
 
@@ -225,7 +232,9 @@ void Network::locationIs(Location::Ptr loc) {
 	for (NotifieeIterator it = notifiee_.begin();
 			 it != notifiee_.end();
 			 ++it) {
-		(*it)->onLocationNew(loc);
+		try {
+			(*it)->onLocationNew(loc);
+		} catch(...) {}
 	}
 }
 
@@ -238,7 +247,9 @@ void Network::locationDel(string name) {
 	for (NotifieeIterator it = notifiee_.begin();
 			 it != notifiee_.end();
 			 ++it) {
-		(*it)->onLocationDel(itseg->second);
+		try {
+			(*it)->onLocationDel(itseg->second);
+		} catch(...) {}
 	}
 }
 
@@ -441,7 +452,7 @@ void Path::segmentNew(Segment::Ptr seg, FleetDesc::Ptr fleet) {
 	}
 
 	/* avoid circular paths */
-	if (visited_[seg->destination()->name()])
+	if (!seg->destination() || visited_[seg->destination()->name()])
 		return;
 
 	segments_.push_back(seg);
@@ -473,10 +484,6 @@ void PathList::pathNew(Path::Ptr p) {
 bool Connectivity::meetPathConstraints(Path::Ptr p, Miles length, Hours time, 
 																			 Dollars cost)
 {
-	// cout << "p->cost(): " << p->cost().value() << ", maxCost: " << cost.value() << endl; 
-	// cout << "p->time(): " << p->time().value() << ", maxTime: " << time.value() << endl; 
-	// cout << "p->length(): " << p->length().value() << ", maxLength: " << length.value() << endl; 
-
 	if (p->cost() < cost &&
 			p->time() < time &&
 			p->length() < length)
@@ -489,17 +496,21 @@ void Connectivity::enqueueNextSegments(queue<Path::Ptr>& q, Path::Ptr& p,
 												 ExpediteOptions expedite)
 {
 	Location::Ptr loc = p->end();
+	if (!loc) return;
+
 	for (Location::SegmentIterator it = loc->segmentIterator();
 			 it != loc->segmentIterator() + loc->segments();
 			 ++it) {
 		Segment::Ptr seg = *it;
 
+		//ignore segments that don't lead anywhere
+		if (seg->destination() == NULL)
+			continue;
+
 		if (expedite == ExpediteSupported &&
 				seg->expedite() == ExpediteNotSupported)
 			continue;
 
-		// cout << "considering adding segment from: " << seg->source()->name() 
-		// 	<< " to: " << seg->destination()->name() << endl;
 		Path::Ptr newp = p->clone();
 		unsigned oldSegmentsCount = newp->segments();
 		newp->segmentNew(seg, net_->fleet(seg->mode()));
@@ -507,8 +518,7 @@ void Connectivity::enqueueNextSegments(queue<Path::Ptr>& q, Path::Ptr& p,
 		//enqueue only if new segment extends the path
 		if (newp->segments() > oldSegmentsCount) {
 			q.push(newp);
-			// cout << "push: path(" << newp->start()->name() << "-> " << 
-			// 	newp->end()->name() << ")" << endl;
+			
 		}
 	}
 }
@@ -524,23 +534,15 @@ PathList::Ptr Connectivity::explore(Location::Ptr start, Miles length,
 			it != start->segmentIterator() + start->segments();
 			++it) {
 		Segment::Ptr seg = *it;
-
-		// cout << seg->name() << endl;
-		// cout << ": seg->source(): " << seg->source()->name() <<
-		// 	", seg->destination(): " << seg->destination()->name() << endl;
 		Path::Ptr p = Path::PathIs();
 		p->expediteIs(ExpediteNotSupported);
 		p->segmentNew(seg, net_->fleet(seg->mode()));
-		// cout << "path->start(): " << p->start()->name() << ", p->end(): "
-		// 	<< p->end()->name() << endl << endl; 
 		toExplore.push(p);
 	}
 
 	while(!toExplore.empty()) {
 		Path::Ptr p = toExplore.front();
 		toExplore.pop();
-		// cout << "pop: path(" << p->start()->name() << "-> " 
-		// 	<< p->end()->name() << ")" << endl;
 		if (meetPathConstraints(p, length, time, cost)) {
 			plist->pathNew(p);
 			enqueueNextSegments(toExplore, p, expedite);
@@ -566,10 +568,6 @@ PathList::Ptr Connectivity::connect(Location::Ptr start, Location::Ptr end)
 		Path::Ptr p = Path::PathIs();
 		p->expediteIs(ExpediteNotSupported);
 		p->segmentNew(seg, net_->fleet(seg->mode()));
-		// cout << "seg->source(): " << seg->source()->name() <<
-		// 		", seg->destination(): " << seg->destination()->name() << endl;
-		// 	cout << "path->start(): " << p->start()->name() << ", p->end(): "
-		// 		<< p->end()->name() << endl << endl; 
 		toExplore.push(p);
 
 		//expedited paths are considered separate paths
@@ -584,8 +582,6 @@ PathList::Ptr Connectivity::connect(Location::Ptr start, Location::Ptr end)
 	while(!toExplore.empty()) {
 		Path::Ptr p = toExplore.front();
 		toExplore.pop();
-		// cout << "pop: path(" << p->start()->name() << "-> " 
-		// 	<< p->end()->name() << ")" << endl;
 		if (p->end() == end) {
 			plist->pathNew(p);
 		}

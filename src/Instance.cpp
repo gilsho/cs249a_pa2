@@ -245,7 +245,8 @@ protected:
 		string printSegment(Segment::Ptr seg);
 		bool exploreArgs(Tokenizer& token, Tokenizer& token_end, 
 										 Location::Ptr& start, Dollars& maxCost, 
-										 Hours& maxTime, Miles& maxLength, ExpediteOptions& expedite);
+										 Hours& maxTime, Miles& maxLength, 
+										 ExpediteOptions& expedite);
 		bool connectArgs(Tokenizer& token, Tokenizer& token_end,
 				Location::Ptr& start, Location::Ptr& end);
 
@@ -272,6 +273,13 @@ ManagerImpl::ManagerImpl() {
 
 Ptr<Instance> ManagerImpl::instanceNew(const string& name, const string& type) {
 		
+		if (instance_.find(name) != instance_.end()) {
+			cerr << "Manager: attempted to create instance that already exists " 
+					 << "Aborting operation." << endl;
+			return NULL;
+		}
+
+
 		if (type == "Customer") {
 				Ptr<CustomerRep> t = new CustomerRep(name, this);
 				instance_[name] = t;
@@ -332,6 +340,9 @@ Ptr<Instance> ManagerImpl::instanceNew(const string& name, const string& type) {
 				return instance_["fleet"];
 		}
 
+		cerr << "Manager: attempted to create instance of invalid type." 
+				 << endl;
+
 		return NULL;
 }
 
@@ -344,21 +355,26 @@ void ManagerImpl::instanceDel(const string& name) {
 		map<string,Ptr<Instance> >::iterator t = instance_.find(name);
 		if(t != instance_.end()) {
 				instance_.erase(t);    
+		} else {
+			cerr << "Manager: attempted to delete nonexistant instance." 
+				 	 << endl;
 		}
 }
 
 
 string LocationRep::attribute(const string& name) {
 		int i = segmentNumber(name);
-		if (i < 0 || (unsigned) i >= loc->segments())
-				return NULL;
+		if (i < 0 || (unsigned) i >= loc->segments()) {
+			cerr << "LocationRep: attempted to read invalid segment" << endl;
+			return "";
+		}
 		Segment::Ptr seg = *(loc->segmentIterator() + i);
 		return seg->name();
 }
 
 
 void LocationRep::attributeIs(const string& name, const string& v) {
-		//nothing to do
+		cerr << "LocationRep: invalid attempt to set attribute" << endl;
 }
 
 static const string segmentStr = "segment";
@@ -405,7 +421,8 @@ string SegmentRep::attribute(const string& name) {
 				return "no";
 		}
 
-		return NULL;
+		cerr << "SegmentRep: attempted to access invalid attribute" << endl;
+		return "";
 
 }
 
@@ -414,15 +431,27 @@ void SegmentRep::attributeIs(const string& name, const string& v) {
 
 		if (name == "source") {
 				Location::Ptr loc = manager_->network()->location(v);
+				if (loc == NULL) {
+					cerr << "SegmentRep: attempted to set source to invalid location" 
+							 << endl;
+					return;
+				}
 				seg->sourceIs(loc);
 		}
 
 		else if (name == "length") {
-				seg->lengthIs(atof(v.c_str()));
+				Miles m = atof(v.c_str());
+				seg->lengthIs(m);
 		}
 
 		else if (name == "return segment") {
 				Segment::Ptr retseg = manager_->network()->segment(v);
+				if (seg->mode() != retseg->mode()) {
+					cerr << "SegmentRep: return segment has different mode than current"
+							 << "segment" << endl;
+					return;
+				}
+
 				seg->destinationIs(retseg->source());
 				retseg->destinationIs(seg->source());
 				seg->returnSegmentIs(retseg);
@@ -437,6 +466,8 @@ void SegmentRep::attributeIs(const string& name, const string& v) {
 						seg->expediteIs(ExpediteSupported);
 				} else if (v == "no") {
 						seg->expediteIs(ExpediteNotSupported);
+				} else {
+					cerr << "SegmentRep: invalid value for expedite support." << endl;
 				}
 		}
 }
@@ -454,14 +485,14 @@ FleetDesc::Ptr FleetRep::selectFleet(const string& s) {
 string FleetRep::parseFleet(const string& s) {
 		int split = s.find(", ");
 		if (split < 0)
-				return NULL;
+				return "";
 		return s.substr(0, split);
 }
 
 string FleetRep::parseAttribute(const string& s) {
 		int split = s.find(", ") + 2;
 		if (split < 0)
-				return NULL;
+				return "";
 		return s.substr(split);
 }
 
@@ -487,7 +518,7 @@ string FleetRep::attribute(const string& name) {
 				return s.str();
 		}
 
-		return NULL;
+		return "";
 }
 
 
@@ -562,12 +593,14 @@ string StatsRep::attribute(const string& name) {
 				return s.str();
 		}
 
-		return NULL;
+		return "";
 }
+
 
 bool ConnRep::exploreArgs(Tokenizer& token, Tokenizer& token_end,
 													Location::Ptr& start, Dollars& maxCost, 
-													Hours& maxTime, Miles& maxLength, ExpediteOptions& expedite)
+													Hours& maxTime, Miles& maxLength, 
+													ExpediteOptions& expedite)
 {
 		Network::Ptr net = manager_->network();
 		start = net->location(*token++);
@@ -617,7 +650,11 @@ string ConnRep::printPath(Path::Ptr p)
 
 		s << printSegment(*it);
 	}
-	s <<  p->end()->name();
+	s << (p->end() ? p->end()->name() : "None");
+	// if (p->end())
+	// 	s <<  p->end()->name();
+	// else 
+	// 	s << "None";
 	return s.str();
 }
 
@@ -675,9 +712,9 @@ string ConnRep::exploreQuery(Tokenizer& token, Tokenizer& token_end) {
 		Miles maxLength(Miles::max());
 		ExpediteOptions expedite = ExpediteNotSupported;
 		Location::Ptr start;
-		if (!exploreArgs(token, token_end, start, maxCost, maxTime, maxLength, expedite)) {
-				return NULL;  
-		}
+		if (!exploreArgs(token, token_end, start, maxCost, maxTime, maxLength, 
+										 expedite))
+				return "";  
 		PathList::Ptr plist = conn_->explore(start, maxLength, maxCost, 
 																				 maxTime, expedite);    
 		return printPathList(plist, false);
@@ -686,13 +723,14 @@ string ConnRep::exploreQuery(Tokenizer& token, Tokenizer& token_end) {
 string ConnRep::connectQuery(Tokenizer& token, Tokenizer& token_end) {
 		Location::Ptr start, end;
 		if (!connectArgs(token, token_end, start, end))
-				return NULL;
+				return "";
 		PathList::Ptr plist = conn_->connect(start, end);
 
 		return printPathList(plist, true);
 }
 
-void tokenizeString(string name, string sepstr, Tokenizer& token, Tokenizer& token_end)
+void tokenizeString(string name, string sepstr, Tokenizer& token, 
+										Tokenizer& token_end)
 {
 		boost::char_separator<char> sep(sepstr.c_str());
 		boost::tokenizer<boost::char_separator<char> > tokenizedLine(name, sep);
@@ -706,14 +744,18 @@ string ConnRep::attribute(const string& name) {
 		Tokenizer token_end;
 		tokenizeString(name," ",token, token_end);
 
-		if (*token == "explore")
-				return exploreQuery(++token, token_end);
-
-		if (*token == "connect") {
-				return connectQuery(++token, token_end);
+		string str = "";
+		if (*token == "explore") {
+				str = exploreQuery(++token, token_end);
+		} else if (*token == "connect") {
+				str = connectQuery(++token, token_end);
 		}
 
-		return NULL;
+		if (str == "") {
+			cerr << "ConnRep: invalid query" << endl;
+		}
+
+		return str;
 }
 
 

@@ -1,14 +1,11 @@
 #include "gtest/gtest.h"
-#include <fstream>
 #include <stdlib.h>
 #include <queue>
 #include <iostream>
 #include "Engine.h"
 
-using namespace Shipping;
 
-using std::cout;
-using std::endl;
+using namespace Shipping;
 
 Network::Ptr prepareNetwork1() 
 {
@@ -46,11 +43,17 @@ Network::Ptr prepareNetwork1()
   net->locationIs(loc6);
 
   Segment::Ptr seg1 = PlaneSegment::PlaneSegmentIs("pseg1");
+  Segment::Ptr seg11 = PlaneSegment::PlaneSegmentIs("pseg1-ret");
   Segment::Ptr seg2 = BoatSegment::BoatSegmentIs("pseg2");
+  Segment::Ptr seg22 = BoatSegment::BoatSegmentIs("pseg2-ret");
   Segment::Ptr seg3 = BoatSegment::BoatSegmentIs("bseg1");
+  Segment::Ptr seg33 = BoatSegment::BoatSegmentIs("bseg1-ret");
   Segment::Ptr seg4 = BoatSegment::BoatSegmentIs("bseg2");
+  Segment::Ptr seg44 = BoatSegment::BoatSegmentIs("bseg2-ret");
   Segment::Ptr seg5 = TruckSegment::TruckSegmentIs("tseg1");
+  Segment::Ptr seg55 = TruckSegment::TruckSegmentIs("tseg1-ret");
   Segment::Ptr seg6 = TruckSegment::TruckSegmentIs("tseg2");
+  Segment::Ptr seg66 = TruckSegment::TruckSegmentIs("tseg2-ret");
 
   seg1->sourceIs(loc1); seg1->destinationIs(loc2);
   seg2->sourceIs(loc2); seg2->destinationIs(loc3);
@@ -58,6 +61,21 @@ Network::Ptr prepareNetwork1()
   seg4->sourceIs(loc6); seg4->destinationIs(loc7);
   seg5->sourceIs(loc1); seg5->destinationIs(loc4);
   seg6->sourceIs(loc4); seg6->destinationIs(loc5);
+
+  seg11->sourceIs(loc2); seg11->destinationIs(loc1);
+  seg22->sourceIs(loc3); seg22->destinationIs(loc2);
+  seg33->sourceIs(loc6); seg33->destinationIs(loc1);
+  seg44->sourceIs(loc7); seg44->destinationIs(loc6);
+  seg55->sourceIs(loc4); seg55->destinationIs(loc1);
+  seg66->sourceIs(loc5); seg66->destinationIs(loc4);
+
+  seg1->returnSegmentIs(seg11);
+  seg2->returnSegmentIs(seg22);
+  seg3->returnSegmentIs(seg33);
+  seg4->returnSegmentIs(seg44);
+  seg5->returnSegmentIs(seg55);
+  seg6->returnSegmentIs(seg66);
+
 
   net->segmentIs(seg1);
   net->segmentIs(seg2);
@@ -73,6 +91,13 @@ Network::Ptr prepareNetwork1()
   seg5->lengthIs(500);
   seg6->lengthIs(600);
 
+  seg11->lengthIs(100);
+  seg22->lengthIs(200);
+  seg33->lengthIs(300);
+  seg44->lengthIs(400);
+  seg55->lengthIs(500);
+  seg66->lengthIs(600);
+
   seg1->difficultyIs(1.0);
   seg2->difficultyIs(2.0);
   seg3->difficultyIs(1.0);
@@ -80,12 +105,26 @@ Network::Ptr prepareNetwork1()
   seg5->difficultyIs(1.0);
   seg6->difficultyIs(4.0);
 
+  seg11->difficultyIs(1.0);
+  seg22->difficultyIs(2.0);
+  seg33->difficultyIs(1.0);
+  seg44->difficultyIs(3.0);
+  seg55->difficultyIs(1.0);
+  seg66->difficultyIs(4.0);
+
   seg1->expediteIs(ExpediteSupported);
   seg2->expediteIs(ExpediteSupported);
   seg3->expediteIs(ExpediteNotSupported);
   seg4->expediteIs(ExpediteSupported);
   seg5->expediteIs(ExpediteNotSupported);
   seg6->expediteIs(ExpediteNotSupported);
+
+  seg11->expediteIs(ExpediteSupported);
+  seg22->expediteIs(ExpediteSupported);
+  seg33->expediteIs(ExpediteNotSupported);
+  seg44->expediteIs(ExpediteSupported);
+  seg55->expediteIs(ExpediteNotSupported);
+  seg66->expediteIs(ExpediteNotSupported);
 
   return net;
 }
@@ -105,6 +144,39 @@ TEST(Location, segmentIs)
   seg->sourceIs(loc1);
   ASSERT_TRUE(loc1->segment(0) == seg);
   ASSERT_TRUE(loc1->segments() == 1);
+}
+
+TEST(Location, segmentDel)
+{
+  Location::Ptr loc = Customer::CustomerIs("loc");
+  Segment::Ptr seg0 = BoatSegment::BoatSegmentIs("seg0");
+  Segment::Ptr seg1 = PlaneSegment::PlaneSegmentIs("seg1");
+  Segment::Ptr seg2 = PlaneSegment::PlaneSegmentIs("seg2");
+  Segment::Ptr seg3 = PlaneSegment::PlaneSegmentIs("seg3");
+  Segment::Ptr seg4 = PlaneSegment::PlaneSegmentIs("seg4");
+  Segment::Ptr seg5 = PlaneSegment::PlaneSegmentIs("seg5");
+
+  seg0->sourceIs(loc);
+  seg1->sourceIs(loc);
+  seg2->sourceIs(loc);
+  seg3->sourceIs(loc);
+  seg4->sourceIs(loc);
+  seg5->sourceIs(loc);
+
+  ASSERT_TRUE(loc->segment(0) == seg0);
+  ASSERT_TRUE(loc->segment(1) == seg1);
+  ASSERT_TRUE(loc->segment(2) == seg2);
+  ASSERT_TRUE(loc->segment(3) == seg3);
+  ASSERT_TRUE(loc->segment(4) == seg4);
+
+  loc->segmentDel(seg0);
+  loc->segmentDel(seg2);
+  loc->segmentDel(seg3);
+
+  ASSERT_TRUE(loc->segment(0) == seg1);
+  ASSERT_TRUE(loc->segment(1) == seg4);
+  ASSERT_TRUE(loc->segment(2) == seg5);
+
 }
 
 TEST(Segment, sourceIs) 
@@ -584,21 +656,22 @@ TEST(Connectivity,exploreAll)
 {
   Network::Ptr net = prepareNetwork1();
   Connectivity::Ptr c = Connectivity::ConnectivityIs(net);
-  Dollars maxCost = 100000;
-  Hours maxTime = 100000;
-  Miles maxLength = 100000;
+  Dollars maxCost = Dollars::max();
+  Hours maxTime = Hours::max();
+  Miles maxLength = Miles::max();
+  
   PathList::Ptr plist = 
     c->explore(net->location("cent"), maxLength, maxCost, maxTime, 
                ExpediteNotSupported);
-  
+
   ASSERT_TRUE(pathExists(plist, "cent", "r1", 3000, 14.2857, 100,
                          ExpediteNotSupported)); 
   ASSERT_TRUE(pathExists(plist, "cent", "t2", 5000, 100, 500,
                          ExpediteNotSupported)); 
   ASSERT_TRUE(pathExists(plist, "cent", "b3", 6000, 50, 300,
                        ExpediteNotSupported)); 
-  ASSERT_TRUE(pathExists(plist, "cent", "c1", 3000+8000, 14.2857+33.333, 100+200,
-                         ExpediteNotSupported)); 
+  ASSERT_TRUE(pathExists(plist, "cent", "c1", 3000+8000, 14.2857+33.333, 
+                         100+200, ExpediteNotSupported)); 
   ASSERT_TRUE(pathExists(plist, "cent", "r2", 5000+24000, 100+120, 500+600,
                          ExpediteNotSupported)); 
   ASSERT_TRUE(pathExists(plist, "cent", "bb3", 6000+24000, 50+66.666, 300+400,
@@ -611,8 +684,9 @@ TEST(Connectivity,exploreCostFilter)
   Network::Ptr net = prepareNetwork1();
   Connectivity::Ptr c = Connectivity::ConnectivityIs(net);
   Dollars maxCost = 17000;
-  Hours maxTime = 100000;
-  Miles maxLength = 100000;
+  Hours maxTime = Hours::max();
+  Miles maxLength = Miles::max();
+
   PathList::Ptr plist = 
     c->explore(net->location("cent"), maxLength, maxCost, maxTime, 
                ExpediteNotSupported);
@@ -623,8 +697,8 @@ TEST(Connectivity,exploreCostFilter)
                          ExpediteNotSupported)); 
   ASSERT_TRUE(pathExists(plist, "cent", "b3", 6000, 50, 300,
                        ExpediteNotSupported)); 
-  ASSERT_TRUE(pathExists(plist, "cent", "c1", 3000+8000, 14.2857+33.333, 100+200,
-                         ExpediteNotSupported));  
+  ASSERT_TRUE(pathExists(plist, "cent", "c1", 3000+8000, 14.2857+33.333, 
+                         100+200, ExpediteNotSupported));  
   ASSERT_TRUE(plist->paths() == 4);
 }
 
@@ -632,17 +706,17 @@ TEST(Connectivity,exploreTimeFilter)
 {
   Network::Ptr net = prepareNetwork1();
   Connectivity::Ptr c = Connectivity::ConnectivityIs(net);
-  Dollars maxCost = 100000;
+  Dollars maxCost = Dollars::max();
   Hours maxTime = 48;
-  Miles maxLength = 100000;
+  Miles maxLength = Miles::max();
   PathList::Ptr plist = 
     c->explore(net->location("cent"), maxLength, maxCost, maxTime, 
                ExpediteNotSupported);
 
   ASSERT_TRUE(pathExists(plist, "cent", "r1", 3000, 14.2857, 100,
                          ExpediteNotSupported)); 
-  ASSERT_TRUE(pathExists(plist, "cent", "c1", 3000+8000, 14.2857+33.333, 100+200,
-                         ExpediteNotSupported)); 
+  ASSERT_TRUE(pathExists(plist, "cent", "c1", 3000+8000, 14.2857+33.333, 
+                         100+200, ExpediteNotSupported)); 
   ASSERT_TRUE(plist->paths() == 2);
 }
 
@@ -651,8 +725,8 @@ TEST(Connectivity,exploreLengthFilter)
 {
   Network::Ptr net = prepareNetwork1();
   Connectivity::Ptr c = Connectivity::ConnectivityIs(net);
-  Dollars maxCost = 100000;
-  Hours maxTime = 100000;
+  Dollars maxCost = Dollars::max();
+  Hours maxTime = Hours::max();
   Miles maxLength = 350;
   PathList::Ptr plist = 
     c->explore(net->location("cent"), maxLength, maxCost, maxTime, 
@@ -662,8 +736,8 @@ TEST(Connectivity,exploreLengthFilter)
                          ExpediteNotSupported)); 
   ASSERT_TRUE(pathExists(plist, "cent", "b3", 6000, 50, 300,
                        ExpediteNotSupported)); 
-  ASSERT_TRUE(pathExists(plist, "cent", "c1", 3000+8000, 14.2857+33.333, 100+200,
-                         ExpediteNotSupported)); 
+  ASSERT_TRUE(pathExists(plist, "cent", "c1", 3000+8000, 14.2857+33.333, 
+                         100+200, ExpediteNotSupported)); 
   ASSERT_TRUE(plist->paths() == 3);
 }
 
@@ -675,10 +749,10 @@ TEST(Connectivity,connect1)
   PathList::Ptr plist = 
     c->connect(net->location("cent"), net->location("c1"));
 
-  ASSERT_TRUE(pathExists(plist, "cent", "c1", 3000+8000, 14.2857+33.333, 100+200,
-                         ExpediteNotSupported)); 
-  ASSERT_TRUE(pathExists(plist, "cent", "c1", 4500+12000, 10.989+25.641, 100+200,
-                         ExpediteSupported)); 
+  ASSERT_TRUE(pathExists(plist, "cent", "c1", 3000+8000, 14.2857+33.333, 
+                         100+200, ExpediteNotSupported)); 
+  ASSERT_TRUE(pathExists(plist, "cent", "c1", 4500+12000, 10.989+25.641, 
+                         100+200, ExpediteSupported)); 
   ASSERT_TRUE(plist->paths() == 2);
 }
 
