@@ -1,10 +1,10 @@
 
 #include "Engine.h"
 
-using std::cout;
-using std::endl;
+
 using std::set;
 using std::queue;
+using std::cout;
 
 namespace Shipping {
 
@@ -33,21 +33,31 @@ void Segment::notifieeDel(Notifiee * n) {
 
 void Segment::sourceIs(Location::Ptr _source) {
 	if (source_ == _source) return;
+	source_->segmentDel(this); 	//notify old source of change
 	source_ = _source;
 }
 
 void Segment::returnSegmentIs(Segment::Ptr seg) {
 	if (return_segment_ == seg) return;
-	if (seg->source() != destination_) return;
-	if (seg->destination() != source_) return;
+
+	if (seg == NULL) {
+		if (return_segment_ != NULL) {
+			return_segment_->return_segment_ = NULL;
+		} 
+		return_segment_ = NULL;
+		return;
+	}
+
 	if (seg->mode() != mode_) return;
 	return_segment_ = seg;
 	seg->return_segment_ = this;
+
 }
 
-void Segment::destinationIs(Location::Ptr _destination) {
-	if (destination_ == _destination) return;
-	destination_ = _destination;
+Location::Ptr Segment::destination() const {
+	if (return_segment_) 
+		return return_segment_->source();
+	return NULL;
 }
 
 void Segment::expediteIs(ExpediteOptions _expedite) {
@@ -80,66 +90,58 @@ Segment::Notifiee::~Notifiee() {
 	}
 }
 
-void TruckSegment::sourceIs(Location::Ptr _source) { 
-	if (source_ == _source) return;
-	if (_source->type() != CustomerLocation &&
-			_source->type() != PortLocation &&
-			_source->type() != TruckTerminalLocation)
+void TruckSegment::sourceIs(Location::Ptr newsource) { 
+	if (source_ == newsource) return;
+	if (newsource != NULL &&
+			newsource->type() != CustomerLocation &&
+			newsource->type() != PortLocation &&
+			newsource->type() != TruckTerminalLocation)
 		return;
 
-	source_ = _source;
-	source_->segmentIs(this);
-}
-
-void TruckSegment::destinationIs(Location::Ptr _destination) { 
-	if (destination_ == _destination) return;
-	if (_destination->type() != CustomerLocation &&
-			_destination->type() != PortLocation &&
-			_destination->type() != TruckTerminalLocation)
-		return;
-
-	destination_ = _destination;
+	Location::Ptr oldsource = source_;
+	source_ = NULL;
+	if (oldsource)
+		oldsource->segmentDel(this);
+	
+	source_ = newsource;
+	if (newsource)
+		newsource->segmentIs(this);
 }
 
 
-void BoatSegment::sourceIs(Location::Ptr _source) { 
-	if (source_ == _source) return;
-	if (_source->type() != CustomerLocation &&
-			_source->type() != PortLocation &&
-			_source->type() != BoatTerminalLocation)
+void BoatSegment::sourceIs(Location::Ptr newsource) { 
+	if (source_ == newsource) return;
+	if (newsource != NULL &&
+			newsource->type() != CustomerLocation &&
+			newsource->type() != PortLocation &&
+			newsource->type() != BoatTerminalLocation)
 		return;
-	source_ = _source;
-	source_->segmentIs(this);
+
+	Location::Ptr oldsource = source_;
+	source_ = NULL;
+	if (oldsource)
+		oldsource->segmentDel(this);
+	
+	source_ = newsource;
+	if (newsource)
+		newsource->segmentIs(this);
 }
 
-void BoatSegment::destinationIs(Location::Ptr _destination) { 
-	if (destination_ == _destination) return;
-	if (_destination->type() != CustomerLocation &&
-			_destination->type() != PortLocation &&
-			_destination->type() != BoatTerminalLocation)
+void PlaneSegment::sourceIs(Location::Ptr newsource) { 
+	if (source_ == newsource) return;
+	if (newsource != NULL &&
+			newsource->type() != CustomerLocation &&
+			newsource->type() != PortLocation &&
+			newsource->type() != PlaneTerminalLocation)
 		return;
-
-	destination_ = _destination;
-}
-
-void PlaneSegment::sourceIs(Location::Ptr _source) { 
-	if (source_ == _source) return;
-	if (_source->type() != CustomerLocation &&
-			_source->type() != PortLocation &&
-			_source->type() != PlaneTerminalLocation)
-		return;
-	source_ = _source;
-	source_->segmentIs(this);
-}
-
-void PlaneSegment::destinationIs(Location::Ptr _destination) { 
-	if (destination_ == _destination) return;
-	if (_destination->type() != CustomerLocation &&
-			_destination->type() != PortLocation &&
-			_destination->type() != PlaneTerminalLocation)
-		return;
-
-	destination_ = _destination;
+	Location::Ptr oldsource = source_;
+	source_ = NULL;
+	if (oldsource)
+		oldsource->segmentDel(this);
+	
+	source_ = newsource;
+	if (newsource)
+		newsource->segmentIs(this);
 }
 
 Segment::Ptr Location::segment(unsigned index) const {
@@ -165,12 +167,13 @@ void Location::segmentIs(Segment::Ptr seg) {
 
 
 void Location::segmentDel(Segment::Ptr seg) {
-
+	if (seg == NULL) return;
 	for (SegmentIterator it = segments_.begin();
 			it != segments_.end();
 			++it) {
 		if (*it == seg.ptr()) {
 			segments_.erase(it);
+			seg->sourceIs(NULL);
 			return;
 		}
 	}
@@ -201,15 +204,19 @@ void Network::segmentIs(Segment::Ptr seg) {
 
 void Network::segmentDel(string name) {
 	if (segments_.find(name) == segments_.end()) return;
-	map<string, Segment::Ptr>::iterator itseg = segments_.find(name);
-	segments_.erase(itseg);
+	std::cerr << "segmentDel 1" << std::endl;
+
+	Segment::Ptr seg = segments_.find(name)->second;
+	segments_.erase(name);
+	seg->sourceIs(NULL);
+	seg->returnSegmentIs(NULL);
 
 	// notification
 	for (NotifieeIterator it = notifiee_.begin();
 			 it != notifiee_.end();
 			 ++it) {
 		try {
-			(*it)->onSegmentDel(itseg->second);
+			(*it)->onSegmentDel(seg);
 		} catch(...) {}
 	}
 }
@@ -241,14 +248,25 @@ void Network::locationIs(Location::Ptr loc) {
 void Network::locationDel(string name) {
 	if (locations_.find(name) == locations_.end()) return;
 	map<string, Location::Ptr>::iterator itseg = locations_.find(name);
+	Location::Ptr loc = itseg->second;
 	locations_.erase(itseg);
+
+	//copy over segments
+	vector<Segment::Ptr> oldsegments;
+	for (unsigned i = 0; i < loc->segments(); i++) {
+		oldsegments.push_back(loc->segment(i));
+	}
+
+	for (unsigned i = 0; i < oldsegments.size(); i++) {
+		oldsegments[i]->sourceIs(NULL);
+	}
 
 	// notification
 	for (NotifieeIterator it = notifiee_.begin();
 			 it != notifiee_.end();
 			 ++it) {
 		try {
-			(*it)->onLocationDel(itseg->second);
+			(*it)->onLocationDel(loc);
 		} catch(...) {}
 	}
 }
@@ -439,7 +457,6 @@ void Path::expediteIs(ExpediteOptions _expedite) {
 }
 
 void Path::segmentNew(Segment::Ptr seg, FleetDesc::Ptr fleet) {
-
 	/* avoid paths that don't support the expedite property */
 	if (expedite_ == ExpediteSupported &&
 			seg->expedite() != ExpediteSupported)

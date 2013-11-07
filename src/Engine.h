@@ -377,8 +377,7 @@ public:
 	Miles length() const { return length_; }
 	void lengthIs(Miles _length) { length_ = _length; }
 
-	Location::Ptr destination() const { return destination_; }
-	virtual void destinationIs(Location::Ptr _destination);
+	Location::Ptr destination() const;
 
 	DifficultyLevel difficulty() const { return difficulty_; }
 	void difficultyIs(DifficultyLevel _difficulty) { difficulty_ = _difficulty; } 
@@ -399,7 +398,6 @@ protected:
 	string name_;
 	TransportationMode mode_;
 	Location::Ptr source_;
-	Location::Ptr destination_;
 	Miles length_;
 	DifficultyLevel difficulty_;
 	ExpediteOptions expedite_;
@@ -418,7 +416,6 @@ public:
 	}
 
 virtual void sourceIs(Location::Ptr _source);
-virtual void destinationIs(Location::Ptr _destination);
 
 
 protected:
@@ -437,7 +434,6 @@ public:
 	}
 
 virtual void sourceIs(Location::Ptr _source);
-virtual void destinationIs(Location::Ptr _destination);
 
 
 protected:
@@ -455,7 +451,6 @@ public:
 	}
 
 virtual void sourceIs(Location::Ptr _source);
-virtual void destinationIs(Location::Ptr _destination);
 
 protected:
 	TruckSegment(string name, TransportationMode mode) : Segment(name, mode) {}

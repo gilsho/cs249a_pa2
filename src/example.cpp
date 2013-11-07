@@ -124,5 +124,11 @@ int main(int argc, char *argv[]) {
 
     cerr << "Done!" << endl;
 
+    manager->instanceDel("truckSeg1");
+    manager->instanceDel("truckSeg2");
+    Ptr<Instance> x = manager->instance("truckSeg1");
+    cout << conn->attribute("connect customer2 : customer1") << endl;
+
+
     return 0;
 }

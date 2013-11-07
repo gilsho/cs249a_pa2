@@ -19,6 +19,10 @@ namespace Shipping {
 // Rep layer classes
 //
 
+class ConnRep;
+class StatsRep;
+class FleetRep;
+
 class ManagerImpl : public Instance::Manager {
 public:
 		ManagerImpl();
@@ -32,11 +36,14 @@ public:
 		// Manager method
 		void instanceDel(const string& name);
 
-		Network::Ptr network() const { return net; }
+		Network::Ptr network() const { return net_; }
 
 private:
 		map<string,Ptr<Instance> > instance_;
-		Network::Ptr net;
+		Network::Ptr net_;
+		ConnRep *conn_;
+		StatsRep *stats_;
+		FleetRep *fleet_;
 };
 
 class LocationRep : public Instance {
@@ -55,9 +62,10 @@ public:
 		void attributeIs(const string& name, const string& v);
 
 protected:
+		~LocationRep();
 		ManagerImpl *manager_;
 		int segmentNumber(const string& name);
-		Location::Ptr loc;
+		Location::Ptr loc_;
 
 };
 																																																	
@@ -67,8 +75,8 @@ public:
 		CustomerRep(const string& name, ManagerImpl *manager) :
 				LocationRep(name, manager)
 		{
-				loc = Customer::CustomerIs(name);  
-				manager_->network()->locationIs(loc); 
+				loc_ = Customer::CustomerIs(name);  
+				manager_->network()->locationIs(loc_); 
 		}
 };
 																																																	
@@ -78,8 +86,8 @@ public:
 		PortRep(const string& name, ManagerImpl *manager) :
 				LocationRep(name, manager)
 		{
-				loc = Port::PortIs(name); 
-				manager_->network()->locationIs(loc);   
+				loc_ = Port::PortIs(name); 
+				manager_->network()->locationIs(loc_);   
 		}
 };
 																																																	
@@ -89,8 +97,8 @@ public:
 		TruckTerminalRep(const string& name, ManagerImpl *manager) :
 				LocationRep(name, manager)
 		{
-				loc = TruckTerminal::TruckTerminalIs(name);  
-				manager_->network()->locationIs(loc);  
+				loc_ = TruckTerminal::TruckTerminalIs(name);  
+				manager_->network()->locationIs(loc_);  
 		}
 };
 
@@ -100,8 +108,8 @@ public:
 		BoatTerminalRep(const string& name, ManagerImpl *manager) :
 				LocationRep(name, manager)
 		{
-				loc = BoatTerminal::BoatTerminalIs(name); 
-				manager_->network()->locationIs(loc);   
+				loc_ = BoatTerminal::BoatTerminalIs(name); 
+				manager_->network()->locationIs(loc_);   
 		}
 };
 
@@ -111,8 +119,8 @@ public:
 		PlaneTerminalRep(const string& name, ManagerImpl *manager) :
 				LocationRep(name, manager)
 		{
-				loc = PlaneTerminal::PlaneTerminalIs(name);  
-				manager_->network()->locationIs(loc);  
+				loc_ = PlaneTerminal::PlaneTerminalIs(name);  
+				manager_->network()->locationIs(loc_);  
 		}
 };
 
@@ -132,8 +140,9 @@ public:
 		void attributeIs(const string& name, const string& v);
 
 protected:
+		~SegmentRep();
 		ManagerImpl *manager_;
-		Segment::Ptr seg;
+		Segment::Ptr seg_;
 
 };
 
@@ -143,8 +152,8 @@ public:
 		BoatSegmentRep(const string& name, ManagerImpl *manager) :
 				SegmentRep(name, manager)
 		{
-				seg = BoatSegment::BoatSegmentIs(name);   
-				manager_->network()->segmentIs(seg); 
+				seg_ = BoatSegment::BoatSegmentIs(name);   
+				manager_->network()->segmentIs(seg_); 
 		}
 };
 
@@ -154,8 +163,8 @@ public:
 		TruckSegmentRep(const string& name, ManagerImpl *manager) :
 				SegmentRep(name, manager)
 		{
-				seg = TruckSegment::TruckSegmentIs(name);   
-				manager_->network()->segmentIs(seg); 
+				seg_ = TruckSegment::TruckSegmentIs(name);   
+				manager_->network()->segmentIs(seg_); 
 		}
 };
 
@@ -165,8 +174,8 @@ public:
 		PlaneSegmentRep(const string& name, ManagerImpl *manager) :
 				SegmentRep(name, manager)
 		{
-				seg = PlaneSegment::PlaneSegmentIs(name);   
-				manager_->network()->segmentIs(seg);
+				seg_ = PlaneSegment::PlaneSegmentIs(name);   
+				manager_->network()->segmentIs(seg_);
 		}
 };
 
@@ -259,16 +268,10 @@ protected:
 
 
 ManagerImpl::ManagerImpl() {
-		net = Network::NetworkIs("network");
-		StatsRep *stats = new StatsRep("stats", this);
-		instance_["stats"] = stats;
-
-		FleetRep *fleet = new FleetRep("fleet", this);
-		instance_["fleet"] = fleet;
-
-		ConnRep *conn = new ConnRep("conn", this);
-		instance_["conn"] = conn;
-
+		net_ = Network::NetworkIs("network");
+		stats_ = new StatsRep("stats", this);
+		fleet_ = new FleetRep("fleet", this);
+		conn_ = new ConnRep("conn", this);
 }
 
 Ptr<Instance> ManagerImpl::instanceNew(const string& name, const string& type) {
@@ -329,15 +332,18 @@ Ptr<Instance> ManagerImpl::instanceNew(const string& name, const string& type) {
 		}
 
 		if (type == "Stats") {
-				return instance_["stats"];
+				instance_[name] = stats_;
+				return stats_;
 		}
 
 		if (type == "Conn") {
-				return instance_["conn"];
+				instance_[name] = conn_;
+				return conn_;
 		}
 
 		if (type == "Fleet") {
-				return instance_["fleet"];
+				instance_[name] = fleet_;
+				return fleet_;
 		}
 
 		cerr << "Manager: attempted to create instance of invalid type." 
@@ -354,21 +360,24 @@ Ptr<Instance> ManagerImpl::instance(const string& name) {
 void ManagerImpl::instanceDel(const string& name) {
 		map<string,Ptr<Instance> >::iterator t = instance_.find(name);
 		if(t != instance_.end()) {
-				instance_.erase(t);    
+				instance_.erase(t); 
 		} else {
 			cerr << "Manager: attempted to delete nonexistant instance." 
 				 	 << endl;
 		}
 }
 
+LocationRep::~LocationRep() {
+	manager_->network()->locationDel(loc_->name());
+}
 
 string LocationRep::attribute(const string& name) {
 		int i = segmentNumber(name);
-		if (i < 0 || (unsigned) i >= loc->segments()) {
+		if (i < 0 || (unsigned) i >= loc_->segments()) {
 			cerr << "LocationRep: attempted to read invalid segment" << endl;
 			return "";
 		}
-		Segment::Ptr seg = *(loc->segmentIterator() + i);
+		Segment::Ptr seg = *(loc_->segmentIterator() + i);
 		return seg->name();
 }
 
@@ -388,6 +397,10 @@ int LocationRep::segmentNumber(const string& name) {
 		return 0;
 }
 
+SegmentRep::~SegmentRep() {
+	manager_->network()->segmentDel(seg_->name());
+}
+
 
 string SegmentRep::attribute(const string& name) {
 
@@ -395,27 +408,27 @@ string SegmentRep::attribute(const string& name) {
 		s << setprecision(2) << fixed;
 
 		if (name == "source") {
-				return seg->source()->name();
+				return seg_->source()->name();
 		}
 
 		if (name == "length") {
 				ostringstream s;
-				s << seg->length().value();
+				s << seg_->length().value();
 				return s.str();
 		}
 
 		if (name == "return segment") {
-				return seg->returnSegment()->name();
+				return seg_->returnSegment()->name();
 		}
 
 		if (name == "difficulty") {
 				ostringstream s;
-				s << seg->difficulty().value();
+				s << seg_->difficulty().value();
 				return s.str();
 		}
 
 		if (name == "expedite support") {
-				if (seg->expedite() == ExpediteSupported) {
+				if (seg_->expedite() == ExpediteSupported) {
 						return "yes";
 				}
 				return "no";
@@ -436,36 +449,33 @@ void SegmentRep::attributeIs(const string& name, const string& v) {
 							 << endl;
 					return;
 				}
-				seg->sourceIs(loc);
+				seg_->sourceIs(loc);
 		}
 
 		else if (name == "length") {
 				Miles m = atof(v.c_str());
-				seg->lengthIs(m);
+				seg_->lengthIs(m);
 		}
 
 		else if (name == "return segment") {
 				Segment::Ptr retseg = manager_->network()->segment(v);
-				if (seg->mode() != retseg->mode()) {
+				if (seg_->mode() != retseg->mode()) {
 					cerr << "SegmentRep: return segment has different mode than current"
 							 << "segment" << endl;
 					return;
 				}
-
-				seg->destinationIs(retseg->source());
-				retseg->destinationIs(seg->source());
-				seg->returnSegmentIs(retseg);
+				seg_->returnSegmentIs(retseg);
 		}
 
 		else if (name == "difficulty") {
-				seg->difficultyIs(atof(v.c_str()));
+				seg_->difficultyIs(atof(v.c_str()));
 		}
 
 		else if (name == "expedite support") {
 				if (v == "yes") {
-						seg->expediteIs(ExpediteSupported);
+						seg_->expediteIs(ExpediteSupported);
 				} else if (v == "no") {
-						seg->expediteIs(ExpediteNotSupported);
+						seg_->expediteIs(ExpediteNotSupported);
 				} else {
 					cerr << "SegmentRep: invalid value for expedite support." << endl;
 				}
@@ -651,10 +661,6 @@ string ConnRep::printPath(Path::Ptr p)
 		s << printSegment(*it);
 	}
 	s << (p->end() ? p->end()->name() : "None");
-	// if (p->end())
-	// 	s <<  p->end()->name();
-	// else 
-	// 	s << "None";
 	return s.str();
 }
 

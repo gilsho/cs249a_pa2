@@ -202,6 +202,10 @@ int main(int argc, char *argv[]) {
     cout << "# Ports          : " << stats->attribute("Port") << endl;
     cout << "# Customers         : " << stats->attribute("Customer") << endl;
 
+
+
+
+
     cerr << "Done!" << endl;
 
     return 0;
