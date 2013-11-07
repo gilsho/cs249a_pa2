@@ -19,6 +19,12 @@ namespace Shipping {
 // Rep layer classes
 //
 
+
+enum InstanceStatus {
+	InstanceValid,
+	InstanceDeleted
+};
+
 class ConnRep;
 class StatsRep;
 class FleetRep;
@@ -46,11 +52,22 @@ private:
 		FleetRep *fleet_;
 };
 
-class LocationRep : public Instance {
+class InstanceImpl : public Instance {
+public:
+	virtual void statusIs(InstanceStatus _status) {}
+	InstanceStatus status() const { return status_; }
+protected:
+	InstanceImpl(const string& name) : 
+		Instance(name), status_(InstanceDeleted) {}
+
+	InstanceStatus status_;
+};
+
+class LocationRep : public InstanceImpl {
 public:
 
 		LocationRep(const string& name, ManagerImpl* manager) :
-				Instance(name), manager_(manager)
+				InstanceImpl(name), manager_(manager)
 		{
 				// Nothing else to do.
 		}
@@ -60,13 +77,15 @@ public:
 
 		// Instance method
 		void attributeIs(const string& name, const string& v);
+	
+		InstanceStatus status() const { return status_; }
+		void statusIs(InstanceStatus _status);
 
 protected:
 		~LocationRep();
 		ManagerImpl *manager_;
 		int segmentNumber(const string& name);
 		Location::Ptr loc_;
-
 };
 																																																	
 class CustomerRep : public LocationRep {
@@ -124,11 +143,11 @@ public:
 		}
 };
 
-class SegmentRep : public Instance {
+class SegmentRep : public InstanceImpl {
 public:
 
 		SegmentRep(const string& name, ManagerImpl* manager) :
-				Instance(name), manager_(manager)
+				InstanceImpl(name), manager_(manager)
 		{
 				// Nothing else to do.
 		}
@@ -138,6 +157,9 @@ public:
 
 		// Instance method
 		void attributeIs(const string& name, const string& v);
+
+		InstanceStatus status() const { return status_; }
+		void statusIs(InstanceStatus _status);
 
 protected:
 		~SegmentRep();
@@ -180,11 +202,11 @@ public:
 };
 
 
-class FleetRep : public Instance {
+class FleetRep : public InstanceImpl {
 public:
 
 		FleetRep(const string& name, ManagerImpl* manager) :
-				Instance(name), manager_(manager)
+				InstanceImpl(name), manager_(manager)
 		{
 				boat_fleet_ = BoatFleetDesc::BoatFleetDescIs();
 				plane_fleet_ = PlaneFleetDesc::PlaneFleetDescIs();
@@ -212,11 +234,11 @@ protected:
 		TruckFleetDesc::Ptr truck_fleet_;
 };
 
-class StatsRep : public Instance {
+class StatsRep : public InstanceImpl {
 public:
 
 		StatsRep(const string& name, ManagerImpl* manager) :
-				Instance(name), manager_(manager)
+				InstanceImpl(name), manager_(manager)
 		{
 				stats_ = StatsConfig::StatsConfigIs(manager_->network());
 		}
@@ -232,11 +254,11 @@ protected:
 		Stats::Ptr stats_;
 };
 
-class ConnRep : public Instance {
+class ConnRep : public InstanceImpl {
 public:
 
 		ConnRep(const string& name, ManagerImpl* manager) :
-				Instance(name), manager_(manager)
+				InstanceImpl(name), manager_(manager)
 		{
 				conn_ = Connectivity::ConnectivityIs(manager_->network());
 		}
@@ -368,7 +390,15 @@ void ManagerImpl::instanceDel(const string& name) {
 }
 
 LocationRep::~LocationRep() {
-	manager_->network()->locationDel(loc_->name());
+	statusIs(InstanceDeleted);
+}
+
+void LocationRep::statusIs(InstanceStatus newstatus) {
+	if (status_ == newstatus) return;
+	if (status_ == InstanceValid && newstatus == InstanceDeleted) {
+		manager_->network()->locationDel(loc_->name());
+		status_ = InstanceDeleted;
+	}
 }
 
 string LocationRep::attribute(const string& name) {
@@ -398,7 +428,15 @@ int LocationRep::segmentNumber(const string& name) {
 }
 
 SegmentRep::~SegmentRep() {
-	manager_->network()->segmentDel(seg_->name());
+	statusIs(InstanceDeleted);
+}
+
+void SegmentRep::statusIs(InstanceStatus newstatus) {
+	if (status_ == newstatus) return;
+	if (status_ == InstanceValid && newstatus == InstanceDeleted) {
+		manager_->network()->segmentDel(seg_->name());
+		status_ = InstanceDeleted;
+	}
 }
 
 
