@@ -7,6 +7,14 @@
 
 using namespace Shipping;
 
+#include <fstream>
+#include <sstream>
+#include <iomanip>
+#include <iostream>
+#include <string>
+using namespace std;
+
+
 Network::Ptr prepareNetwork1() 
 {
   Network::Ptr net = Network::NetworkIs("net1");
@@ -55,25 +63,24 @@ Network::Ptr prepareNetwork1()
   Segment::Ptr seg6 = TruckSegment::TruckSegmentIs("tseg2");
   Segment::Ptr seg66 = TruckSegment::TruckSegmentIs("tseg2-ret");
 
-  seg1->sourceIs(loc1); seg1->destinationIs(loc2);
-  seg2->sourceIs(loc2); seg2->destinationIs(loc3);
-  seg3->sourceIs(loc1); seg3->destinationIs(loc6);
-  seg4->sourceIs(loc6); seg4->destinationIs(loc7);
-  seg5->sourceIs(loc1); seg5->destinationIs(loc4);
-  seg6->sourceIs(loc4); seg6->destinationIs(loc5);
-
-  seg11->sourceIs(loc2); seg11->destinationIs(loc1);
-  seg22->sourceIs(loc3); seg22->destinationIs(loc2);
-  seg33->sourceIs(loc6); seg33->destinationIs(loc1);
-  seg44->sourceIs(loc7); seg44->destinationIs(loc6);
-  seg55->sourceIs(loc4); seg55->destinationIs(loc1);
-  seg66->sourceIs(loc5); seg66->destinationIs(loc4);
+  seg1->sourceIs(loc1); 
+  seg11->sourceIs(loc2);
+  seg2->sourceIs(loc2); 
+  seg22->sourceIs(loc3);
+  seg3->sourceIs(loc1); 
+  seg33->sourceIs(loc6);
+  seg4->sourceIs(loc6); 
+  seg44->sourceIs(loc7);
+  seg5->sourceIs(loc1); 
+  seg55->sourceIs(loc4);
+  seg6->sourceIs(loc4); 
+  seg66->sourceIs(loc5);
 
   seg1->returnSegmentIs(seg11);
-  seg2->returnSegmentIs(seg22);
+  seg22->returnSegmentIs(seg2);
   seg3->returnSegmentIs(seg33);
   seg4->returnSegmentIs(seg44);
-  seg5->returnSegmentIs(seg55);
+  seg55->returnSegmentIs(seg5);
   seg6->returnSegmentIs(seg66);
 
 
@@ -83,6 +90,13 @@ Network::Ptr prepareNetwork1()
   net->segmentIs(seg4);
   net->segmentIs(seg5);
   net->segmentIs(seg6);
+
+  net->segmentIs(seg11);
+  net->segmentIs(seg22);
+  net->segmentIs(seg33);
+  net->segmentIs(seg44);
+  net->segmentIs(seg55);
+  net->segmentIs(seg66);  
 
   seg1->lengthIs(100);
   seg2->lengthIs(200);
@@ -176,7 +190,17 @@ TEST(Location, segmentDel)
   ASSERT_TRUE(loc->segment(0) == seg1);
   ASSERT_TRUE(loc->segment(1) == seg4);
   ASSERT_TRUE(loc->segment(2) == seg5);
+}
 
+TEST(Location, segmentDel_consistency)
+{
+  Location::Ptr loc = Customer::CustomerIs("loc");
+  Segment::Ptr seg = PlaneSegment::PlaneSegmentIs("seg1");
+
+  seg->sourceIs(loc);
+  ASSERT_TRUE(loc->segment(0) == seg);
+  loc->segmentDel(seg);
+  ASSERT_TRUE(seg->source() == NULL);
 }
 
 TEST(Segment, sourceIs) 
@@ -188,16 +212,63 @@ TEST(Segment, sourceIs)
   ASSERT_TRUE(seg->source() == loc1);
 }
 
-TEST(Segment, destinationIs) 
+TEST(Segment, sourceIs_consistency1) 
 {
   Location::Ptr loc1 = Customer::CustomerIs("loc1");
   Location::Ptr loc2 = Customer::CustomerIs("loc2");
+  Location::Ptr loc3 = Customer::CustomerIs("loc3");
   Segment::Ptr seg = BoatSegment::BoatSegmentIs("seg");
-  seg->destinationIs(loc1);
-  ASSERT_TRUE(seg->destination() == loc1);
+  seg->sourceIs(loc1);
+  ASSERT_TRUE(seg->source() == loc1);
+  ASSERT_TRUE(loc1->segment(0) == seg);
+  seg->sourceIs(NULL);
+  ASSERT_TRUE(seg->source() == NULL);
+  ASSERT_TRUE(loc1->segment(0) == NULL);
+  ASSERT_TRUE(loc1->segments() == 0);
 }
 
-TEST(Segemtn, name)
+
+TEST(Segment, destination) 
+{
+  Location::Ptr loc1 = Customer::CustomerIs("loc1");
+  Location::Ptr loc2 = Customer::CustomerIs("loc2");
+  Segment::Ptr seg1 = BoatSegment::BoatSegmentIs("seg1");
+  Segment::Ptr seg2 = BoatSegment::BoatSegmentIs("seg2");
+  seg1->sourceIs(loc1);
+  seg2->sourceIs(loc2);
+  seg1->returnSegmentIs(seg2);
+  ASSERT_TRUE(seg1->destination() == loc2);
+  ASSERT_TRUE(seg2->destination() == loc1);
+}
+
+TEST(Segment, returnSegment) 
+{
+  Location::Ptr loc1 = Customer::CustomerIs("loc1");
+  Location::Ptr loc2 = Customer::CustomerIs("loc2");
+  Segment::Ptr seg1 = BoatSegment::BoatSegmentIs("seg1");
+  Segment::Ptr seg2 = BoatSegment::BoatSegmentIs("seg2");
+  seg1->sourceIs(loc1);
+  seg2->sourceIs(loc2);
+  seg1->returnSegmentIs(seg2);
+  ASSERT_TRUE(seg1->returnSegment() == seg2);
+  ASSERT_TRUE(seg2->returnSegment() == seg1);
+}
+
+TEST(Segment, returnSegment_NULL) 
+{
+  Location::Ptr loc1 = Customer::CustomerIs("loc1");
+  Location::Ptr loc2 = Customer::CustomerIs("loc2");
+  Segment::Ptr seg1 = BoatSegment::BoatSegmentIs("seg1");
+  Segment::Ptr seg2 = BoatSegment::BoatSegmentIs("seg2");
+  seg1->sourceIs(loc1);
+  seg2->sourceIs(loc2);
+  seg1->returnSegmentIs(seg2);
+  seg2->returnSegmentIs(NULL);
+  ASSERT_TRUE(seg1->returnSegment() == NULL);
+  ASSERT_TRUE(seg2->returnSegment() == NULL);
+}
+
+TEST(Segment, name)
 {
   Segment::Ptr seg1 = BoatSegment::BoatSegmentIs("seg1");
   ASSERT_TRUE(seg1->name() == "seg1");
@@ -337,6 +408,40 @@ TEST(Network, Fleet)
   ASSERT_TRUE(net->fleet(TruckMode) != b);
   ASSERT_TRUE(net->fleet(BoatMode) != p);
   ASSERT_TRUE(net->fleet(PlaneMode) != t);
+}
+
+TEST(Network, locationDel)
+{
+
+}
+
+TEST(Network, segmentDel)
+{
+  Network::Ptr net = Network::NetworkIs("net");
+  Location::Ptr loc1 = Port::PortIs("loc1");
+  Location::Ptr loc2 = Port::PortIs("loc2");
+  Segment::Ptr seg1 = BoatSegment::BoatSegmentIs("seg1");
+  Segment::Ptr seg2 = BoatSegment::BoatSegmentIs("seg2");
+
+  seg1->sourceIs(loc1);
+  seg2->sourceIs(loc2);
+  seg1->returnSegmentIs(seg2);
+
+  net->locationIs(loc1);
+  net->locationIs(loc2);
+  net->segmentIs(seg1);
+  net->segmentIs(seg2);
+
+  net->segmentDel(seg1->name());
+  ASSERT_TRUE(seg1->source() == NULL);
+  ASSERT_TRUE(loc1->segments() == 0);
+  ASSERT_TRUE(seg2->returnSegment() == NULL);
+  ASSERT_TRUE(seg1->returnSegment() == NULL);
+
+  net->segmentDel(seg2->name());
+  ASSERT_TRUE(seg2->source() == NULL);
+  ASSERT_TRUE(loc2->segments() == 0);
+
 }
 
 TEST(Engine, InstanceOf) 
@@ -542,21 +647,27 @@ TEST(Path, segmentNew)
   Location::Ptr loc2 = Port::PortIs("redwood");
   Location::Ptr loc3 = BoatTerminal::BoatTerminalIs("sf");
 
-  Segment::Ptr seg1 = TruckSegment::TruckSegmentIs("280");
+  Segment::Ptr seg1 = TruckSegment::TruckSegmentIs("280N");
+  Segment::Ptr seg11 = TruckSegment::TruckSegmentIs("280S");
   seg1->sourceIs(loc1);
-  seg1->destinationIs(loc2);
+  seg11->sourceIs(loc2);
+  seg1->returnSegmentIs(seg11);
   seg1->difficultyIs(2.0);
   seg1->lengthIs(15);
 
   Segment::Ptr seg2 = BoatSegment::BoatSegmentIs("bay");
+  Segment::Ptr seg22 = BoatSegment::BoatSegmentIs("bay");
   seg2->sourceIs(loc2);
-  seg2->destinationIs(loc3);
+  seg22->sourceIs(loc3);
+  seg2->returnSegmentIs(seg22);
   seg2->difficultyIs(3.0);
   seg2->lengthIs(25);
 
   Segment::Ptr seg3 = PlaneSegment::PlaneSegmentIs("skyline");
+  Segment::Ptr seg33 = PlaneSegment::PlaneSegmentIs("skyline");
   seg3->sourceIs(loc2);
-  seg3->destinationIs(loc1);
+  seg33->sourceIs(loc1);
+  seg3->returnSegmentIs(seg33);
 
   Path::Ptr p = Path::PathIs();
   p->segmentNew(seg1, fleet);
@@ -597,23 +708,29 @@ TEST(Path, ExpeditePath)
   Location::Ptr loc2 = Port::PortIs("redwood");
   Location::Ptr loc3 = BoatTerminal::BoatTerminalIs("sf");
 
-  Segment::Ptr seg1 = TruckSegment::TruckSegmentIs("280");
+  Segment::Ptr seg1 = TruckSegment::TruckSegmentIs("280N");
+  Segment::Ptr seg11 = TruckSegment::TruckSegmentIs("280S");
   seg1->sourceIs(loc1);
-  seg1->destinationIs(loc2);
+  seg11->sourceIs(loc2);
+  seg1->returnSegmentIs(seg11);
   seg1->difficultyIs(2.0);
   seg1->lengthIs(15);
   seg1->expediteIs(ExpediteSupported);
 
   Segment::Ptr seg2 = BoatSegment::BoatSegmentIs("bay");
+  Segment::Ptr seg22 = BoatSegment::BoatSegmentIs("bay");
   seg2->sourceIs(loc2);
-  seg2->destinationIs(loc3);
+  seg22->sourceIs(loc3);
+  seg22->returnSegmentIs(seg2);
   seg2->difficultyIs(3.0);
   seg2->lengthIs(25);
   seg2->expediteIs(ExpediteSupported);
 
   Segment::Ptr seg3 = PlaneSegment::PlaneSegmentIs("skyline");
+  Segment::Ptr seg33 = PlaneSegment::PlaneSegmentIs("skyline");
   seg3->sourceIs(loc2);
-  seg3->destinationIs(loc1);
+  seg33->sourceIs(loc1);
+  seg3->returnSegmentIs(seg33);
   seg3->expediteIs(ExpediteSupported);
 
   Path::Ptr p = Path::PathIs();
@@ -769,7 +886,25 @@ TEST(Connectivity,connect2)
   ASSERT_TRUE(plist->paths() == 1);
 }
 
+TEST(Connectivity, connect3)
+{
+  Network::Ptr net = prepareNetwork1();
+  Connectivity::Ptr c = Connectivity::ConnectivityIs(net);
+  net->segmentDel("tseg2");
+  PathList::Ptr plist = 
+    c->connect(net->location("cent"), net->location("r2"));
+  ASSERT_TRUE(plist->paths() == 0);  
+}
 
+TEST(Connectivity, connect4)
+{
+  Network::Ptr net = prepareNetwork1();
+  Connectivity::Ptr c = Connectivity::ConnectivityIs(net);
+  net->segmentDel("tseg1-ret");
+  PathList::Ptr plist = 
+    c->connect(net->location("cent"), net->location("r2"));
+  ASSERT_TRUE(plist->paths() == 0);  
+}
 
 
 
