@@ -4,7 +4,6 @@
 
 using std::set;
 using std::queue;
-using std::cout;
 
 namespace Shipping {
 
@@ -204,7 +203,6 @@ void Network::segmentIs(Segment::Ptr seg) {
 
 void Network::segmentDel(string name) {
 	if (segments_.find(name) == segments_.end()) return;
-	std::cerr << "segmentDel 1" << std::endl;
 
 	Segment::Ptr seg = segments_.find(name)->second;
 	segments_.erase(name);
@@ -270,6 +268,8 @@ void Network::locationDel(string name) {
 		} catch(...) {}
 	}
 }
+
+
 
 
 void Network::notifieeNew(Notifiee * n) {
