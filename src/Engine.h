@@ -532,6 +532,8 @@ public:
 
 	typedef Fwk::Ptr<Network> Ptr;
   typedef vector<Notifiee *>::iterator NotifieeIterator;
+  typedef map<string, Location::Ptr>::iterator LocationIterator;
+  typedef map<string, Segment::Ptr>::iterator SegmentIterator;
 
 
 	Location::Ptr location(string name);
@@ -597,6 +599,7 @@ public:
 
 protected:
 	Network(string name) : name_(name) {};
+	~Network();
 	string name_;
 	map<string, Location::Ptr> locations_;
 	map<string, Segment::Ptr> segments_;

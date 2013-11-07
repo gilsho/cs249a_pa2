@@ -67,8 +67,8 @@ protected:
 class LocationRep : public InstanceImpl {
 public:
 
-		LocationRep(const string& name, ManagerImpl* manager) :
-				InstanceImpl(name), manager_(manager)
+		LocationRep(const string& name, Network::Ptr net) :
+				InstanceImpl(name), net_(net)
 		{
 				// Nothing else to do.
 		}
@@ -84,71 +84,71 @@ public:
 
 protected:
 		~LocationRep();
-		ManagerImpl *manager_;
 		int segmentNumber(const string& name);
+		Network::Ptr net_;
 		Location::Ptr loc_;
 };
 																																																	
 class CustomerRep : public LocationRep {
 public:
 
-		CustomerRep(const string& name, ManagerImpl *manager) :
-				LocationRep(name, manager)
+		CustomerRep(const string& name, Network::Ptr net) :
+				LocationRep(name, net)
 		{
 				loc_ = Customer::CustomerIs(name);  
-				manager_->network()->locationIs(loc_); 
+				net_->locationIs(loc_); 
 		}
 };
 																																																	
 class PortRep : public LocationRep {
 public:
 
-		PortRep(const string& name, ManagerImpl *manager) :
-				LocationRep(name, manager)
+		PortRep(const string& name, Network::Ptr net) :
+				LocationRep(name, net)
 		{
 				loc_ = Port::PortIs(name); 
-				manager_->network()->locationIs(loc_);   
+				net_->locationIs(loc_);   
 		}
 };
 																																																	
 class TruckTerminalRep : public LocationRep {
 public:
 
-		TruckTerminalRep(const string& name, ManagerImpl *manager) :
-				LocationRep(name, manager)
+		TruckTerminalRep(const string& name, Network::Ptr net) :
+				LocationRep(name, net)
 		{
 				loc_ = TruckTerminal::TruckTerminalIs(name);  
-				manager_->network()->locationIs(loc_);  
+				net_->locationIs(loc_);  
 		}
 };
 
 class BoatTerminalRep : public LocationRep {
 public:
 
-		BoatTerminalRep(const string& name, ManagerImpl *manager) :
-				LocationRep(name, manager)
+		BoatTerminalRep(const string& name, Network::Ptr net) :
+				LocationRep(name, net)
 		{
 				loc_ = BoatTerminal::BoatTerminalIs(name); 
-				manager_->network()->locationIs(loc_);   
+				net_->locationIs(loc_);   
 		}
 };
 
 class PlaneTerminalRep : public LocationRep {
 public:
 
-		PlaneTerminalRep(const string& name, ManagerImpl *manager) :
-				LocationRep(name, manager)
+		PlaneTerminalRep(const string& name, Network::Ptr net) :
+				LocationRep(name, net)
 		{
 				loc_ = PlaneTerminal::PlaneTerminalIs(name);  
-				manager_->network()->locationIs(loc_);  
+				net_->locationIs(loc_);  
 		}
 };
 
 class SegmentRep : public InstanceImpl {
 public:
 
-		SegmentRep(const string& name, ManagerImpl* manager) :
-				InstanceImpl(name), manager_(manager)
+		SegmentRep(const string& name, Network::Ptr net) :
+				InstanceImpl(name), net_(net)
 		{
 				// Nothing else to do.
 		}
@@ -164,7 +164,7 @@ public:
 
 protected:
 		~SegmentRep();
-		ManagerImpl *manager_;
+		Network::Ptr net_;
 		Segment::Ptr seg_;
 
 };
@@ -172,33 +172,33 @@ protected:
 class BoatSegmentRep : public SegmentRep {
 public:
 
-		BoatSegmentRep(const string& name, ManagerImpl *manager) :
-				SegmentRep(name, manager)
+		BoatSegmentRep(const string& name, Network::Ptr net) :
+				SegmentRep(name, net)
 		{
 				seg_ = BoatSegment::BoatSegmentIs(name);   
-				manager_->network()->segmentIs(seg_); 
+				net_->segmentIs(seg_); 
 		}
 };
 
 class TruckSegmentRep : public SegmentRep {
 public:
 
-		TruckSegmentRep(const string& name, ManagerImpl *manager) :
-				SegmentRep(name, manager)
+		TruckSegmentRep(const string& name,  Network::Ptr net) :
+				SegmentRep(name, net)
 		{
 				seg_ = TruckSegment::TruckSegmentIs(name);   
-				manager_->network()->segmentIs(seg_); 
+				net_->segmentIs(seg_); 
 		}
 };
 
 class PlaneSegmentRep : public SegmentRep {
 public:
 
-		PlaneSegmentRep(const string& name, ManagerImpl *manager) :
-				SegmentRep(name, manager)
+		PlaneSegmentRep(const string& name,  Network::Ptr net) :
+				SegmentRep(name, net)
 		{
 				seg_ = PlaneSegment::PlaneSegmentIs(name);   
-				manager_->network()->segmentIs(seg_);
+				net_->segmentIs(seg_);
 		}
 };
 
@@ -206,17 +206,16 @@ public:
 class FleetRep : public InstanceImpl {
 public:
 
-		FleetRep(const string& name, ManagerImpl* manager) :
-				InstanceImpl(name), manager_(manager)
+		FleetRep(const string& name, Network::Ptr net) :
+				InstanceImpl(name), net_(net)
 		{
 				boat_fleet_ = BoatFleetDesc::BoatFleetDescIs();
 				plane_fleet_ = PlaneFleetDesc::PlaneFleetDescIs();
 				truck_fleet_ = TruckFleetDesc::TruckFleetDescIs();
 
-				Network::Ptr net = manager_->network();
-				net->boatFleetIs(boat_fleet_);
-				net->truckFleetIs(truck_fleet_);
-				net->planeFleetIs(plane_fleet_);
+				net_->boatFleetIs(boat_fleet_);
+				net_->truckFleetIs(truck_fleet_);
+				net_->planeFleetIs(plane_fleet_);
 		}
 
 		// Instance method
@@ -226,7 +225,7 @@ public:
 		void attributeIs(const string& name, const string& v);
 
 protected:
-		Ptr<ManagerImpl> manager_;
+		Network::Ptr net_;
 		FleetDesc::Ptr selectFleet(const string& s);
 		string parseFleet(const string& s);
 		string parseAttribute(const string& s);
@@ -238,10 +237,10 @@ protected:
 class StatsRep : public InstanceImpl {
 public:
 
-		StatsRep(const string& name, ManagerImpl* manager) :
-				InstanceImpl(name), manager_(manager)
+		StatsRep(const string& name, Network::Ptr net) :
+				InstanceImpl(name), net_(net)
 		{
-				stats_ = StatsConfig::StatsConfigIs(manager_->network());
+				stats_ = StatsConfig::StatsConfigIs(net);
 		}
 
 		// Instance method
@@ -251,17 +250,17 @@ public:
 		void attributeIs(const string& name, const string& v) {}
 
 protected:
-		ManagerImpl *manager_;
+		Network::Ptr net_;
 		Stats::Ptr stats_;
 };
 
 class ConnRep : public InstanceImpl {
 public:
 
-		ConnRep(const string& name, ManagerImpl* manager) :
-				InstanceImpl(name), manager_(manager)
+		ConnRep(const string& name, Network::Ptr net) :
+				InstanceImpl(name), net_(net)
 		{
-				conn_ = Connectivity::ConnectivityIs(manager_->network());
+				conn_ = Connectivity::ConnectivityIs(net_);
 		}
 
 		// Instance method
@@ -285,17 +284,18 @@ protected:
 		string exploreQuery(Tokenizer& token, Tokenizer& token_end);
 		string connectQuery(Tokenizer& token, Tokenizer& token_end);
 
-		ManagerImpl *manager_;
+		Network::Ptr net_;
 		Connectivity::Ptr conn_;
 };
 
 
 ManagerImpl::ManagerImpl() {
 		net_ = Network::NetworkIs("network");
-		stats_ = new StatsRep("stats", this);
-		fleet_ = new FleetRep("fleet", this);
-		conn_ = new ConnRep("conn", this);
+		stats_ = new StatsRep("stats", net_);
+		fleet_ = new FleetRep("fleet", net_);
+		conn_ = new ConnRep("conn", net_);
 }
+
 
 Ptr<Instance> ManagerImpl::instanceNew(const string& name, const string& type) {
 		
@@ -307,49 +307,49 @@ Ptr<Instance> ManagerImpl::instanceNew(const string& name, const string& type) {
 
 
 		if (type == "Customer") {
-				Ptr<CustomerRep> t = new CustomerRep(name, this);
+				Ptr<CustomerRep> t = new CustomerRep(name, net_);
 				instance_[name] = t;
 				return t;
 		}
 
 		if (type == "Port") {
-				Ptr<PortRep> t = new PortRep(name, this);
+				Ptr<PortRep> t = new PortRep(name, net_);
 				instance_[name] = t;
 				return t;
 		}
 
 		if (type == "Truck terminal") {
-				Ptr<TruckTerminalRep> t = new TruckTerminalRep(name, this);
+				Ptr<TruckTerminalRep> t = new TruckTerminalRep(name, net_);
 				instance_[name] = t;
 				return t;
 		}
 
 		if (type == "Boat terminal") {
-				Ptr<BoatTerminalRep> t = new BoatTerminalRep(name, this);
+				Ptr<BoatTerminalRep> t = new BoatTerminalRep(name, net_);
 				instance_[name] = t;
 				return t;
 		}
 
 		if (type == "Plane terminal") {
-				Ptr<PlaneTerminalRep> t = new PlaneTerminalRep(name, this);
+				Ptr<PlaneTerminalRep> t = new PlaneTerminalRep(name, net_);
 				instance_[name] = t;
 				return t;
 		}
 
 		if (type == "Truck segment") {
-				Ptr<TruckSegmentRep> t = new TruckSegmentRep(name, this);
+				Ptr<TruckSegmentRep> t = new TruckSegmentRep(name, net_);
 				instance_[name] = t;
 				return t;
 		}
 
 		if (type == "Boat segment") {
-				Ptr<BoatSegmentRep> t = new BoatSegmentRep(name, this);
+				Ptr<BoatSegmentRep> t = new BoatSegmentRep(name, net_);
 				instance_[name] = t;
 				return t;
 		}
 
 		if (type == "Plane segment") {
-				Ptr<PlaneSegmentRep> t = new PlaneSegmentRep(name, this);
+				Ptr<PlaneSegmentRep> t = new PlaneSegmentRep(name, net_);
 				instance_[name] = t;
 				return t;
 		}
@@ -398,7 +398,7 @@ LocationRep::~LocationRep() {
 void LocationRep::statusIs(InstanceStatus newstatus) {
 	if (status_ == newstatus) return;
 	if (status_ == InstanceValid && newstatus == InstanceDeleted) {
-		manager_->network()->locationDel(loc_->name());
+		net_->locationDel(loc_->name());
 		status_ = InstanceDeleted;
 	}
 }
@@ -437,7 +437,7 @@ SegmentRep::~SegmentRep() {
 void SegmentRep::statusIs(InstanceStatus newstatus) {
 	if (status_ == newstatus) return;
 	if (status_ == InstanceValid && newstatus == InstanceDeleted) {
-		manager_->network()->segmentDel(seg_->name());
+		net_->segmentDel(seg_->name());
 		status_ = InstanceDeleted;
 	}
 }
@@ -484,7 +484,7 @@ string SegmentRep::attribute(const string& name) {
 void SegmentRep::attributeIs(const string& name, const string& v) {
 
 		if (name == "source") {
-				Location::Ptr loc = manager_->network()->location(v);
+				Location::Ptr loc = net_->location(v);
 				if (loc == NULL) {
 					cerr << "SegmentRep: attempted to set source to invalid location" 
 							 << endl;
@@ -499,7 +499,7 @@ void SegmentRep::attributeIs(const string& name, const string& v) {
 		}
 
 		else if (name == "return segment") {
-				Segment::Ptr retseg = manager_->network()->segment(v);
+				Segment::Ptr retseg = net_->segment(v);
 				if (seg_->mode() != retseg->mode()) {
 					cerr << "SegmentRep: return segment has different mode than current"
 							 << "segment" << endl;
@@ -654,8 +654,7 @@ bool ConnRep::exploreArgs(Tokenizer& token, Tokenizer& token_end,
 													Hours& maxTime, Miles& maxLength, 
 													ExpediteOptions& expedite)
 {
-	Network::Ptr net = manager_->network();
-	start = net->location(*token++);
+	start = net_->location(*token++);
 	if (start == NULL) return false;
 	if (*token++ != ":") return false;
 	while (token != token_end) {
@@ -683,11 +682,10 @@ bool ConnRep::exploreArgs(Tokenizer& token, Tokenizer& token_end,
 
 bool ConnRep::connectArgs(Tokenizer& token, Tokenizer& token_end,
 													Location::Ptr& start, Location::Ptr& end) {
-	Network::Ptr net = manager_->network();
-	start = net->location(*token++);
+	start = net_->location(*token++);
 	if (start == NULL) return false;
 	if (*token++ != ":") return false;
-	end = net->location(*token++);
+	end = net_->location(*token++);
 	if (end == NULL) return false;
 	return true;
 }

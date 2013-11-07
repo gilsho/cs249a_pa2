@@ -184,6 +184,35 @@ Segment::Ptr Network::segment(string name) {
 	return segments_[name];
 }
 
+Network::~Network() {
+
+	// remove locations
+	vector<Location::Ptr> oldlocations;
+	for (LocationIterator it = locations_.begin();
+			 it != locations_.end();
+			 ++it) {
+		oldlocations.push_back(it->second);
+	}
+	for (vector<Location::Ptr>::iterator it = oldlocations.begin();
+			 it != oldlocations.end();
+			 ++it) {
+		locationDel((*it)->name());
+	}
+
+	//remove segments
+	vector<Segment::Ptr> oldsegments;
+	for (SegmentIterator it = segments_.begin();
+			 it != segments_.end();
+			 ++it) {
+		oldsegments.push_back(it->second);
+	}
+	for (vector<Segment::Ptr>::iterator it = oldsegments.begin();
+			 it != oldsegments.end();
+			 ++it) {
+		segmentDel((*it)->name());
+	}
+}
+
 void Network::segmentIs(Segment::Ptr seg) {
 	// make operation idempotent
 	if (segments_.find(seg->name()) != segments_.end())
