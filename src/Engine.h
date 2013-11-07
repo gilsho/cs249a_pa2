@@ -238,7 +238,7 @@ class Location : public Fwk::PtrInterface<Location> {
 public:
 
   typedef Fwk::Ptr<Location> Ptr;
-  typedef vector<Segment *>::iterator SegmentIterator;
+  typedef vector<Fwk::Ptr<Segment> >::iterator SegmentIterator;
 
 	string name() const { return name_; }
 	void nameIs(string name) { name_ = name;}
@@ -255,7 +255,7 @@ protected:
 	Location(string name, LocationType type) : name_(name), type_(type) {};
 	string name_;
 	LocationType type_;
-  vector<Segment *> segments_;
+  vector<Fwk::Ptr<Segment> > segments_;
 
 //subscribe to notifications from segments that are added to it.
 };
