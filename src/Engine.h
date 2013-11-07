@@ -662,7 +662,8 @@ public:
 		void onExpedite();
 
 	protected:
-		SegmentReactor(StatsConfig *s) : owner_(s) {}
+		SegmentReactor(StatsConfig *s) : 
+			owner_(s), oldval(ExpediteNotSupported) {}
 		StatsConfig *owner_;
 		ExpediteOptions oldval;
 	};

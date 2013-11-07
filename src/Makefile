@@ -1,5 +1,4 @@
 CXXFLAGS = -Wall -g
-CXX = g++-4.6
 
 OBJECTS = Instance.o Engine.o
 

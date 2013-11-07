@@ -333,6 +333,7 @@ StatsConfig::StatsConfig(Network::Ptr _network)  {
 	truck_segments_ = 0;
 	boat_segments_ = 0; 
 	plane_segments_ = 0;
+	expedited_ = 0;
 	net_reactor_ = NetworkReactor::ReactorIs(this);
 	net_reactor_->notifierIs(network_);
 }

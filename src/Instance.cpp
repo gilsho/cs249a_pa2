@@ -383,8 +383,8 @@ Ptr<Instance> ManagerImpl::instance(const string& name) {
 void ManagerImpl::instanceDel(const string& name) {
 		map<string,Ptr<InstanceImpl> >::iterator t = instance_.find(name);
 		if(t != instance_.end()) {
-				instance_.erase(t); 
 				t->second->statusIs(InstanceDeleted);
+				instance_.erase(t); 
 		} else {
 			cerr << "Manager: attempted to delete nonexistant instance." 
 				 	 << endl;
