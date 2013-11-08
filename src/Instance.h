@@ -17,40 +17,40 @@ using Fwk::Ptr;
 class Instance : public Fwk::PtrInterface<Instance> {
 public:
 
-    ///
-    /// Returns the name of the instance.
-    ///
-    virtual string name() {
-        return name_;
-    }
+	///
+	/// Returns the name of the instance.
+	///
+	virtual string name() {
+			return name_;
+	}
 
-    ///
-    /// Returns the value of the attribute with the given name.
-    /// If an attribute with the given name has not been set explicitly
-    /// then the return value is the default value for the attribute,
-    /// if any, or the empty string ("") otherwise.
-    ///
-    virtual string attribute(const string& attributeName) = 0;
+	///
+	/// Returns the value of the attribute with the given name.
+	/// If an attribute with the given name has not been set explicitly
+	/// then the return value is the default value for the attribute,
+	/// if any, or the empty string ("") otherwise.
+	///
+	virtual string attribute(const string& attributeName) = 0;
 
-    ///
-    /// Modify the named attribute to have the value
-    /// specified by the given string.
-    ///
-    /// In some situations, setting an attribute on an instance
-    /// may implicitly modify attributes on other instances.
-    ///
-    virtual void attributeIs(const string& name, const string& v) = 0;
+	///
+	/// Modify the named attribute to have the value
+	/// specified by the given string.
+	///
+	/// In some situations, setting an attribute on an instance
+	/// may implicitly modify attributes on other instances.
+	///
+	virtual void attributeIs(const string& name, const string& v) = 0;
 
-    // See full definition below.
-    class Manager;
+	// See full definition below.
+	class Manager;
 
 protected:
-    Instance(const string& name) : name_(name) {
-        // Nothing else to do.
-    }
+	Instance(const string& name) : name_(name) {
+			// Nothing else to do.
+	}
 
 private:
-    string name_;
+	string name_;
 
 };
 
@@ -60,30 +60,30 @@ private:
 ///
 class Instance::Manager : public Fwk::PtrInterface<Instance::Manager> {
 public:
-    ///
-    /// Returns a newly-created instance with the specified name.
-    /// The spec paramater indicates additional information about
-    /// the instance, such as its type.
-    ///
-    /// Names must be unique to a manager, so it is an error to call
-    /// instanceNew with a name that is already associated with an instance
-    /// through this manager.
-    ///
-    virtual Ptr<Instance> instanceNew(const string& name, 
-        const string& spec) = 0;
+		///
+		/// Returns a newly-created instance with the specified name.
+		/// The spec paramater indicates additional information about
+		/// the instance, such as its type.
+		///
+		/// Names must be unique to a manager, so it is an error to call
+		/// instanceNew with a name that is already associated with an instance
+		/// through this manager.
+		///
+		virtual Ptr<Instance> instanceNew(const string& name, 
+				const string& spec) = 0;
 
-    ///
-    /// Return the instance with the given name or null if there is none.
-    ///
-    virtual Ptr<Instance> instance(const string& name) = 0;
+		///
+		/// Return the instance with the given name or null if there is none.
+		///
+		virtual Ptr<Instance> instance(const string& name) = 0;
 
-    ///
-    /// Delete the instance with the given name, if there is one.
-    ///
-    /// Deleting an instance may implicitly modify other instances
-    /// associated with the instance.
-    ///
-    virtual void instanceDel(const string& name) = 0;
+		///
+		/// Delete the instance with the given name, if there is one.
+		///
+		/// Deleting an instance may implicitly modify other instances
+		/// associated with the instance.
+		///
+		virtual void instanceDel(const string& name) = 0;
 
 };
 

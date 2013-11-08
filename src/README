@@ -74,9 +74,9 @@ Location
  |- Customer
  |- Port
  |- Terminal
-  		|- TruckTerminal
-  		|- BoatTerminal
-  		|- PlaneTerminal
+      |- TruckTerminal
+      |- BoatTerminal
+      |- PlaneTerminal
 
 Segment
  |- BoatSegment
