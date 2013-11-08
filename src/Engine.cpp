@@ -389,6 +389,10 @@ void StatsConfig::NetworkReactor::onSegmentNew(Segment::Ptr seg) {
 }
 
 void StatsConfig::NetworkReactor::onSegmentDel(Segment::Ptr seg) {
+	
+	if (seg->expedite() == ExpediteSupported)
+		owner_->expeditedIs(owner_->expedited() - 1);
+
 	if (seg->mode() == BoatMode) {
 		owner_->boatSegmentsIs(owner_->boatSegments() - 1);
 	} else if (seg->mode() == PlaneMode) {
@@ -531,7 +535,8 @@ void PathList::pathNew(Path::Ptr p) {
 bool Connectivity::meetPathConstraints(Path::Ptr p, Miles length, Hours time, 
 																			 Dollars cost)
 {
-	if (p->cost() < cost &&
+	if (p->end() != NULL &&
+			p->cost() < cost &&
 			p->time() < time &&
 			p->length() < length)
 		return true;
@@ -542,8 +547,13 @@ bool Connectivity::meetPathConstraints(Path::Ptr p, Miles length, Hours time,
 void Connectivity::enqueueNextSegments(queue<Path::Ptr>& q, Path::Ptr& p, 
 												 ExpediteOptions expedite)
 {
+	//ignore invalid paths
 	Location::Ptr loc = p->end();
 	if (!loc) return;
+
+	//customer locations can only be start/end points of a path
+	if (p->end()->type() == CustomerLocation)
+		return;
 
 	for (Location::SegmentIterator it = loc->segmentIterator();
 			 it != loc->segmentIterator() + loc->segments();

@@ -1,0 +1,54 @@
+fleet->attribute('Boat, speed'): 25.00
+fleet->attribute('Truck, speed'): 60.00
+fleet->attribute('Plane, speed'): 700.00
+fleet->attribute('Plane, cost'): 2.00
+fleet->attribute('Truck, cost'): 5.00
+fleet->attribute('Boat, cost'): 10.00
+fleet->attribute('Truck, capacity'): 50
+**** explore la : distance 1500 ****
+la(s21:150.00:s22) seattle
+la(s41:250.00:s42) dallas
+la(s41:250.00:s42) dallas(s52:330.00:s51) sf
+la(s41:250.00:s42) dallas(s61:350.00:s62) nola
+la(s41:250.00:s42) dallas(s71:450.00:s72) dc
+la(s41:250.00:s42) dallas(s71:450.00:s72) dc(s81:520.00:s82) vancouver
+
+
+**** explore la : cost 1200 time 30 ****
+la(s21:150.00:s22) seattle
+la(s41:250.00:s42) dallas
+
+
+**** explore dc : distance 1000 cost 2000 time 50 ****
+dc(s72:500.00:s71) dallas
+dc(s81:520.00:s82) vancouver
+dc(s72:500.00:s71) dallas(s42:270.00:s41) la
+dc(s72:500.00:s71) dallas(s52:330.00:s51) sf
+dc(s72:500.00:s71) dallas(s61:350.00:s62) nola
+dc(s72:500.00:s71) dallas(s42:270.00:s41) la(s21:150.00:s22) seattle
+
+
+**** explore dc : distance 1000 cost 2000 time 50 expedited ****
+
+
+*** connect la : sf ****
+1660.00 0.83 no; la(s41:250.00:s42) dallas(s52:330.00:s51) sf
+
+
+*** connect nola : seattle ****
+4490.00 3.46 no; nola(s62:400.00:s61) dallas(s42:270.00:s41) la(s21:150.00:s22) seattle
+
+
+===== Stats attributes =====
+ --- Segments --- 
+# Truck segments : 7
+# Plane segments : 10
+# Boat segments : 1
+Expediting %     : 33.33
+ --- Terminals --- 
+# Plane terminals: 1
+# Boat terminals: 0
+# Truck terminals: 1
+ --- Ports and customers --- 
+# Ports          : 2
+# Customers         : 3
