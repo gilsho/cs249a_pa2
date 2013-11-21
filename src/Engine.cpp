@@ -536,9 +536,9 @@ bool Connectivity::meetPathConstraints(Path::Ptr p, Miles length, Hours time,
                                        Dollars cost)
 {
   if (p->end() != NULL &&
-      p->cost() < cost &&
-      p->time() < time &&
-      p->length() < length)
+      p->cost() <= cost &&
+      p->time() <= time &&
+      p->length() <= length)
     return true;
   else
     return false;

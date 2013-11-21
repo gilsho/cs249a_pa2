@@ -52,7 +52,7 @@ public:
 		Ordinal<DifficultyLevel, float>(difficulty) {
 		if (difficulty < minval || difficulty > maxval) {
 			cerr << "DifficultLevel: attempted to set illegal value" << endl;
-			this->value_ = minval;
+			throw "invalid value";
 		}
 	}
 
@@ -72,7 +72,7 @@ public:
 	Hours(float _hours) : Ordinal<Hours, float>(_hours) {
 		if (_hours < minval || _hours > maxval) {
 			cerr << "Hours: attempted to set illegal value" << endl;
-			this->value_ = minval;
+			throw "invalid value";
 		}
 	}
 
@@ -96,7 +96,7 @@ public:
 	Dollars(float _dollars) : Ordinal<Dollars, float>(_dollars) {
 		if (_dollars < minval || _dollars > maxval) {
 			cerr << "Dollars: attempted to set illegal value" << endl;
-			this->value_ = minval;
+			throw "invalid value";
 		}
 	}
 		
@@ -121,7 +121,7 @@ public:
 		Ordinal<DollarsPerMile, float>(_dollarsPerMile) {
 			if (_dollarsPerMile < minval || _dollarsPerMile > maxval) {
 				cerr << "DollarsPerMile: attempted to set illegal value" << endl;
-				this->value_ = minval;
+				throw "invalid value";
 			}
 		}
 		
@@ -149,7 +149,7 @@ public:
 		Ordinal<MilesPerHour, float>(_milesPerHour) {
 		if (_milesPerHour < minval || _milesPerHour > maxval) {
 				cerr << "MilesPerHour: attempted to set illegal value" << endl;
-				this->value_ = minval;
+				throw "invalid value";
 			}
 		}
 
@@ -170,9 +170,9 @@ public:
 	static const Miles max() { return maxval; }
 
 	Miles(float _miles) : Ordinal<Miles, float>(_miles) {
-		if (_miles < minval || _miles > maxval) {
+		if (_miles < minval /*|| _miles > maxval*/) {
 			cerr << "Miles: attempted to set illegal value" << endl;
-			this->value_ = minval;
+			throw "invalid value";
 		}
 	}
 
@@ -204,7 +204,7 @@ public:
 		Ordinal<PackageCapacity, unsigned int>(_capacity) {
 			if (_capacity > maxval) {
 				cerr << "MilesPerHour: attempted to set illegal value" << endl;
-				this->value_ = minval;
+				throw "invalid value";
 			}
 		}
 

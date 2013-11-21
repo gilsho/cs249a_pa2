@@ -9,6 +9,9 @@
 #include "Instance.h"
 #include "Engine.h"
 
+#define INSTANCE_OF(x, C) (dynamic_cast<C>((x)) != 0)
+#define ATTRIBUTE_BUF_SIZE (50)
+
 typedef boost::tokenizer<boost::char_separator<char> >::iterator Tokenizer;
 
 using namespace std;
@@ -48,9 +51,9 @@ public:
 private:
     map<string,Ptr<InstanceImpl> > instance_;
     Network::Ptr net_;
-    ConnRep *conn_;
-    StatsRep *stats_;
-    FleetRep *fleet_;
+    Fwk::Ptr<ConnRep> conn_;
+    Fwk::Ptr<StatsRep> stats_;
+    Fwk::Ptr<FleetRep> fleet_;
 };
 
 class InstanceImpl : public Instance {
@@ -382,13 +385,22 @@ Ptr<Instance> ManagerImpl::instance(const string& name) {
 
 void ManagerImpl::instanceDel(const string& name) {
     map<string,Ptr<InstanceImpl> >::iterator t = instance_.find(name);
-    if(t != instance_.end()) {
-        t->second->statusIs(InstanceDeleted);
-        instance_.erase(t); 
-    } else {
+    if(t == instance_.end()) {
       cerr << "Manager: attempted to delete nonexistant instance." 
            << endl;
+      return;
     }
+
+    if (INSTANCE_OF(t->second.ptr(), StatsRep*) ||
+        INSTANCE_OF(t->second.ptr(), ConnRep*)  ||
+        INSTANCE_OF(t->second.ptr(), FleetRep*)) {
+      instance_.erase(t);
+      // after
+      return;
+    }
+
+    t->second->statusIs(InstanceDeleted);
+    instance_.erase(t); 
 }
 
 LocationRep::~LocationRep() {
@@ -405,7 +417,7 @@ void LocationRep::statusIs(InstanceStatus newstatus) {
 
 string LocationRep::attribute(const string& name) {
   if (status_ == InstanceDeleted) return "";
-  int i = segmentNumber(name);
+  int i = segmentNumber(name) - 1; //transition to zero-based indexing
   if (i < 0 || (unsigned) i >= loc_->segments()) {
     cerr << "LocationRep: attempted to read invalid segment" << endl;
     return "";
@@ -445,25 +457,30 @@ void SegmentRep::statusIs(InstanceStatus newstatus) {
 
 string SegmentRep::attribute(const string& name) {
   if (status_ == InstanceDeleted) return "";
+
   ostringstream s;
-  s << setprecision(2) << fixed;
+  s << setprecision(2) << fixed << showpoint;
 
   if (name == "source") {
-      return seg_->source()->name();
+      if (seg_->source())
+        return seg_->source()->name();
+      else
+        return "";
   }
 
   if (name == "length") {
-      ostringstream s;
       s << seg_->length().value();
       return s.str();
   }
 
   if (name == "return segment") {
+    if (seg_->returnSegment())
       return seg_->returnSegment()->name();
+    else
+      return "";
   }
 
   if (name == "difficulty") {
-      ostringstream s;
       s << seg_->difficulty().value();
       return s.str();
   }
@@ -484,8 +501,13 @@ string SegmentRep::attribute(const string& name) {
 void SegmentRep::attributeIs(const string& name, const string& v) {
 
     if (name == "source") {
+        if (v == "") {
+          seg_->sourceIs(NULL);
+          return;
+        }
+
         Location::Ptr loc = net_->location(v);
-        if (loc == NULL) {
+        if (!loc) {
           cerr << "SegmentRep: attempted to set source to invalid location" 
                << endl;
           return;
@@ -500,7 +522,7 @@ void SegmentRep::attributeIs(const string& name, const string& v) {
 
     else if (name == "return segment") {
         Segment::Ptr retseg = net_->segment(v);
-        if (seg_->mode() != retseg->mode()) {
+        if (retseg && seg_->mode() != retseg->mode()) {
           cerr << "SegmentRep: return segment has different mode than current"
                << "segment" << endl;
           return;
@@ -554,7 +576,7 @@ string FleetRep::attribute(const string& name) {
   FleetDesc::Ptr fleet = selectFleet(str_fleet);
   
   ostringstream s;
-  s << setprecision(2) << fixed;
+  s << setprecision(2) << fixed << showpoint;
   if (str_attr == "speed") {
       s << fleet->speed().value();
       return s.str();
@@ -579,7 +601,6 @@ void FleetRep::attributeIs(const string& name, const string& v) {
   string str_attr = parseAttribute(name);
   FleetDesc::Ptr fleet = selectFleet(str_fleet);
 
-  ostringstream s;
   if (str_attr == "speed") {
       fleet->speedIs(atof(v.c_str()));
   }
@@ -598,7 +619,7 @@ void FleetRep::attributeIs(const string& name, const string& v) {
 string StatsRep::attribute(const string& name) {
   if (status_ == InstanceDeleted) return "";
   ostringstream s;
-  s << setprecision(2) << fixed;
+  s << setprecision(2) << fixed << showpoint;
   if (name == "Customer") {
       s << stats_->customerLocations();
       return s.str();
@@ -707,7 +728,7 @@ string ConnRep::printPath(Path::Ptr p)
 string ConnRep::printPathMetaData(Path::Ptr p)
 {
   ostringstream s;
-  s << setprecision(2) << fixed;
+  s << setprecision(2) << fixed << showpoint;
 
   string expString = "no";
   if (p->expedite() == ExpediteSupported) {
@@ -722,7 +743,7 @@ string ConnRep::printPathMetaData(Path::Ptr p)
 
 string ConnRep::printSegment(Segment::Ptr seg) {
   ostringstream s;
-  s << setprecision(2) << fixed;
+  s << setprecision(2) << fixed << showpoint;
   string rev = "None";
   if (seg->returnSegment() != NULL) 
     rev = seg->returnSegment()->name();
