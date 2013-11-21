@@ -305,7 +305,7 @@ Ptr<Instance> ManagerImpl::instanceNew(const string& name, const string& type) {
     if (instance_.find(name) != instance_.end()) {
       cerr << "Manager: attempted to create instance that already exists " 
            << "Aborting operation." << endl;
-      return NULL;
+      throw "name in use";  
     }
 
 
@@ -374,8 +374,8 @@ Ptr<Instance> ManagerImpl::instanceNew(const string& name, const string& type) {
 
     cerr << "Manager: attempted to create instance of invalid type." 
          << endl;
+    throw "invalid value";
 
-    return NULL;
 }
 
 Ptr<Instance> ManagerImpl::instance(const string& name) {
@@ -388,7 +388,7 @@ void ManagerImpl::instanceDel(const string& name) {
     if(t == instance_.end()) {
       cerr << "Manager: attempted to delete nonexistant instance." 
            << endl;
-      return;
+      throw "invalid value";
     }
 
     if (INSTANCE_OF(t->second.ptr(), StatsRep*) ||
@@ -420,7 +420,7 @@ string LocationRep::attribute(const string& name) {
   int i = segmentNumber(name) - 1; //transition to zero-based indexing
   if (i < 0 || (unsigned) i >= loc_->segments()) {
     cerr << "LocationRep: attempted to read invalid segment" << endl;
-    return "";
+    throw "invalid value";    
   }
   Segment::Ptr seg = *(loc_->segmentIterator() + i);
   return seg->name();
@@ -429,6 +429,7 @@ string LocationRep::attribute(const string& name) {
 
 void LocationRep::attributeIs(const string& name, const string& v) {
     cerr << "LocationRep: invalid attempt to set attribute" << endl;
+    throw "invalid value";
 }
 
 static const string segmentStr = "segment";
@@ -493,7 +494,7 @@ string SegmentRep::attribute(const string& name) {
   }
 
   cerr << "SegmentRep: attempted to access invalid attribute" << endl;
-  return "";
+  throw "invalid value";
 
 }
 
@@ -510,7 +511,7 @@ void SegmentRep::attributeIs(const string& name, const string& v) {
         if (!loc) {
           cerr << "SegmentRep: attempted to set source to invalid location" 
                << endl;
-          return;
+          throw "invalid value";
         }
         seg_->sourceIs(loc);
     }
@@ -525,7 +526,7 @@ void SegmentRep::attributeIs(const string& name, const string& v) {
         if (retseg && seg_->mode() != retseg->mode()) {
           cerr << "SegmentRep: return segment has different mode than current"
                << "segment" << endl;
-          return;
+          throw "invalid value";               
         }
         seg_->returnSegmentIs(retseg);
     }
@@ -541,6 +542,7 @@ void SegmentRep::attributeIs(const string& name, const string& v) {
             seg_->expediteIs(ExpediteNotSupported);
         } else {
           cerr << "SegmentRep: invalid value for expedite support." << endl;
+          throw "invalid value";               
         }
     }
 }
@@ -782,7 +784,7 @@ string ConnRep::exploreQuery(Tokenizer& token, Tokenizer& token_end) {
   if (!exploreArgs(token, token_end, start, maxCost, maxTime, maxLength, 
                    expedite)) {
     cerr << "ConnRep: invalid arguments to explore query" << endl;
-    return "";  
+    throw "invalid value";  
   }
   PathList::Ptr plist = conn_->explore(start, maxLength, maxCost, 
                                        maxTime, expedite);    
@@ -793,7 +795,7 @@ string ConnRep::connectQuery(Tokenizer& token, Tokenizer& token_end) {
   Location::Ptr start, end;
   if (!connectArgs(token, token_end, start, end)) {
       cerr << "ConnRep: invalid arguments to connect query" << endl;
-    return "";
+      throw "invalid value";  
   }
   PathList::Ptr plist = conn_->connect(start, end);
 
