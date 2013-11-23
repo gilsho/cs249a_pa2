@@ -19,7 +19,7 @@ GUNIT_BASE += gtest-1.6.0
 GUNIT_PATH += $(GUNIT_BASE)/include
 
 # The main source file names you will need to test.
-MAIN_FILES += Engine
+MAIN_FILES += Engine ActivityImpl
 
 # The objects corresponding to the tested files.
 MAIN_OBJ_PATH = $(addsuffix .o, $(addprefix $(SRC_PATH), $(MAIN_FILES)))

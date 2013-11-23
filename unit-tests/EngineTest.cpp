@@ -3,6 +3,8 @@
 #include <queue>
 #include <iostream>
 #include "Engine.h"
+#include "Activity.h"
+#include "ActivityImpl.h"
 
 
 using namespace Shipping;
@@ -906,6 +908,18 @@ TEST(Connectivity, connect4)
   ASSERT_TRUE(plist->paths() == 0);  
 }
 
+TEST(Activity, activity) 
+{
+  Activity::Manager::Ptr manager = activityManagerInstance();
+  Activity::Ptr act = manager->activityNew("act");
+  act->statusIs(Activity::ready);
+  manager->lastActivityIs(act);
+  ASSERT_TRUE(act->status() == Activity::ready);
+  act->nextTimeIs(2);
+  manager->nowIs(2);
+  ASSERT_TRUE(act->status() == Activity::free);
+
+}
 
 
 
