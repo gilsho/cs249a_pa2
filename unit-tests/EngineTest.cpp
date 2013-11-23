@@ -918,6 +918,36 @@ TEST(Activity, activity)
   act->nextTimeIs(2);
   manager->nowIs(2);
   ASSERT_TRUE(act->status() == Activity::free);
+}
+
+TEST(Customer, customer_notification)
+{
+  class CustomerReactor : public Customer::Notifiee {
+  public:
+    void onTransferRate() { t = notifier_->transferRate(); }
+    void onShipmentSize() { s = notifier_->shipmentSize(); }
+    void onDestination() { d = notifier_->destination(); }
+
+    CustomerReactor() : t(0), s(0), d(NULL) {}
+
+    ShipmentsPerDay t;
+    Packages s;
+    Customer::Ptr d;
+  };
+
+  Customer::Ptr cloc1 = Customer::CustomerIs("cloc1");
+  Customer::Ptr cloc2 = Customer::CustomerIs("cloc2");
+
+  CustomerReactor *reactor = new CustomerReactor();
+  reactor->notifierIs(cloc1);
+
+  cloc1->transferRateIs(12);
+  cloc1->shipmentSizeIs(215);
+  cloc1->destinationIs(cloc2);
+
+  ASSERT_TRUE(reactor->t == 12);
+  ASSERT_TRUE(reactor->s == 215);
+  ASSERT_TRUE(reactor->d == cloc2);
 
 }
 

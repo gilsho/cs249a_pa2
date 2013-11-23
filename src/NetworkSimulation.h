@@ -44,6 +44,9 @@ protected:
 	Hours departure_;
 };
 
+
+
+
 class NetworkSimulation : public Fwk::PtrInterface<NetworkSimulation> {
 public:
 	typedef Fwk::Ptr<NetworkSimulation> Ptr;
@@ -55,8 +58,8 @@ public:
 
 	Activity::Manager::Ptr activityManager() const;
 
-
 protected:
+
 	NetworkSimulation(Activity::Manager::Ptr _manager) : manager_(_manager) {}
 
 	class NetworkReactor : public Network::Notifiee {
@@ -97,6 +100,24 @@ protected:
 		NetworkSimulation *owner_;
   };
 
+  class LocationReactor : public Location::Notifiee {
+  public:
+  	typedef Fwk::Ptr<NetworkSimulation::LocationReactor> Ptr;
+
+		static Ptr ReactorIs(NetworkSimulation *n) {
+			Ptr m = new LocationReactor(n);
+			return m;
+		}
+
+    void onTransferRate() {}
+    void onShipmentSize() {}
+    void onDestination() {}
+
+  protected:
+    LocationReactor(NetworkSimulation *n) : owner_(n) {}
+		NetworkSimulation *owner_;
+  };
+
   class SegmentReactor : public Segment::Notifiee {
   public:
   	typedef Fwk::Ptr<NetworkSimulation::SegmentReactor> Ptr;
@@ -113,10 +134,19 @@ protected:
 		NetworkSimulation *owner_;
   };
 
+  void customerReactorNew(Customer::Ptr cust);
+	void customerReactorDel(Customer::Ptr cust);
+
+	void locationReactorNew(Location::Ptr loc);
+	void locationReactorDel(Location::Ptr loc);
+
+	void segmentReactorNew(Segment::Ptr seg);
+	void segmentReactorDel(Segment::Ptr seg);
 
 	NetworkReactor::Ptr net_reactor_;
-	vector<CustomerReactor::Ptr> customer_reactors_;
-	vector<SegmentReactor::Ptr> segment_reactors_;
+	vector<CustomerReactor::Ptr> cust_reactor_;
+	vector<LocationReactor::Ptr> loc_reactor_;
+	vector<SegmentReactor::Ptr> seg_reactor_;
 
 	Activity::Manager::Ptr manager_;
 };
