@@ -1,6 +1,6 @@
 CXXFLAGS = -Wall -g
 
-OBJECTS = Instance.o Engine.o ActivityImpl.o
+OBJECTS = Instance.o Engine.o ActivityImpl.o NetworkSimulation.o
 
 default:	test1 example test-cases
 
@@ -20,3 +20,4 @@ Instance.o: Instance.cpp Instance.h PtrInterface.h Ptr.h Engine.h Engine.cpp
 test1.o: test1.cpp Instance.h PtrInterface.h Ptr.h
 Engine.o: Engine.cpp Engine.h
 ActivityImpl.o: ActivityImpl.h ActivityImpl.cpp Activity.h
+NetworkSimulation.o: Engine.o NetworkSimulation.cpp NetworkSimulation.h

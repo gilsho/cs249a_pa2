@@ -178,6 +178,102 @@ void Location::segmentDel(Segment::Ptr seg) {
   }
 }
 
+void Location::notifieeNew(Notifiee * n) {
+  for (NotifieeIterator it = notifiee_.begin();
+       it != notifiee_.end();
+       ++it) {
+    if (*it == n)
+      return;
+  }
+
+  notifiee_.push_back(n);
+}
+
+void Location::notifieeDel(Notifiee * n) {
+  for (NotifieeIterator it = notifiee_.begin();
+       it != notifiee_.end();
+       ++it) {
+    if (*it == n) {
+      notifiee_.erase(it);
+      return;
+    }
+  }
+}
+
+void Location::Notifiee::notifierIs(const Location::Ptr _notifier) {
+  if (_notifier == notifier_) 
+    return;
+  notifier_ = _notifier;
+  notifier_->notifieeNew(this);
+}
+
+
+Location::Notifiee::~Notifiee() {
+  if (notifier_.ptr()) {
+    notifier_->notifieeDel(this);
+  }
+}
+
+void Customer::transferRateIs(ShipmentsPerDay _transferRate)  {
+  if (_transferRate == transferRate_)
+    return;
+  transferRate_ = _transferRate;
+
+  for (NotifieeIterator it = notifiee_.begin();
+       it != notifiee_.end();
+       ++it) {
+    try {
+      Customer::Notifiee *cnotifiee = dynamic_cast<Customer::Notifiee *>(*it);
+      if (cnotifiee)
+        cnotifiee->onTransferRate();
+    } catch(...) {}
+  }
+}
+
+void Customer::shipmentSizeIs(Packages _shipmentSize) {
+  if (_shipmentSize == shipmentSize_)
+    return;
+  shipmentSize_ = _shipmentSize;
+
+  for (NotifieeIterator it = notifiee_.begin();
+       it != notifiee_.end();
+       ++it) {
+    try {
+      dynamic_cast<Customer::Notifiee *>(*it)->onShipmentSize();
+    } catch(...) {}
+  }
+
+}
+
+void Customer::destinationIs(Customer::Ptr _destination) {
+  if (_destination == destination_)
+    return;
+  destination_ = _destination;
+
+  for (NotifieeIterator it = notifiee_.begin();
+       it != notifiee_.end();
+       ++it) {
+    try {
+      dynamic_cast<Customer::Notifiee *>(*it)->onDestination();
+    } catch(...) {}
+  }
+}
+
+void Customer::Notifiee::notifierIs(const Customer::Ptr _notifier) {
+  if (_notifier == notifier_) 
+    return;
+  notifier_ = _notifier;
+  notifier_->notifieeNew(this);
+}
+
+
+Customer::Notifiee::~Notifiee() {
+  if (notifier_.ptr()) {
+    notifier_->notifieeDel(this);
+  }
+}
+
+
 Segment::Ptr Network::segment(string name) {
   if (segments_.find(name) == segments_.end())
     return NULL;
@@ -342,7 +438,7 @@ void FleetDesc::speedIs(MilesPerHour _speed){
   speed_ = _speed;
 }
 
-void FleetDesc::capacityIs(PackageCapacity _capacity){
+void FleetDesc::capacityIs(Packages _capacity){
   if (capacity_ == _capacity) return;
   capacity_ = _capacity;
 }

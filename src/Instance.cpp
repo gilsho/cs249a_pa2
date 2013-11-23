@@ -10,7 +10,6 @@
 #include "Engine.h"
 
 #define INSTANCE_OF(x, C) (dynamic_cast<C>((x)) != 0)
-#define ATTRIBUTE_BUF_SIZE (50)
 
 typedef boost::tokenizer<boost::char_separator<char> >::iterator Tokenizer;
 

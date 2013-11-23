@@ -1,0 +1,1 @@
+test-cases 2> /dev/null | grep "^test"

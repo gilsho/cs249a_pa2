@@ -191,25 +191,80 @@ public:
 };
 
 
-class PackageCapacity : public Ordinal<PackageCapacity, unsigned int> {
+class Packages : public Ordinal<Packages, unsigned int> {
 public:
 
 	static const float minval = 0;
 	static const float maxval = 10e5;
 	
-	static const PackageCapacity min() { return minval; }
-	static const PackageCapacity max() { return maxval; }
+	static const Packages min() { return minval; }
+	static const Packages max() { return maxval; }
 
-	PackageCapacity(unsigned int _capacity) : 
-		Ordinal<PackageCapacity, unsigned int>(_capacity) {
+	Packages(unsigned int _capacity) : 
+		Ordinal<Packages, unsigned int>(_capacity) {
 			if (_capacity > maxval) {
 				cerr << "MilesPerHour: attempted to set illegal value" << endl;
 				throw "invalid value";
 			}
 		}
 
-	bool operator==(const PackageCapacity& v) const
+	bool operator==(const Packages& v) const
 	{ return Nominal::value_ == v.value_; }
+};
+
+class ShipmentsPerDay : public Ordinal<ShipmentsPerDay, unsigned int> {
+public:
+
+	static const float minval = 0;
+	static const float maxval = 10e5;
+	
+	static const ShipmentsPerDay min() { return minval; }
+	static const ShipmentsPerDay max() { return maxval; }
+
+	ShipmentsPerDay(unsigned int _shipmentsPerDay) : 
+		Ordinal<ShipmentsPerDay, unsigned int>(_shipmentsPerDay) {
+			if (_shipmentsPerDay > maxval) {
+				cerr << "ShipmentsPerDay: attempted to set illegal value" << endl;
+				throw "invalid value";
+			}
+		}
+};
+
+
+class Shipments : public Ordinal<Shipments, unsigned int> {
+public:
+
+	static const float minval = 0;
+	static const float maxval = 10e5;
+	
+	static const Shipments min() { return minval; }
+	static const Shipments max() { return maxval; }
+
+	Shipments(unsigned int _shipments) : 
+		Ordinal<Shipments, unsigned int>(_shipments) {
+			if (_shipments > maxval) {
+				cerr << "Shipments: attempted to set illegal value" << endl;
+				throw "invalid value";
+			}
+		}
+};
+
+class HoursPerShipment : public Ordinal<HoursPerShipment, float> {
+public:
+
+	static const float minval = 0;
+	static const float maxval = 24*365;
+	
+	static const HoursPerShipment min() { return minval; }
+	static const HoursPerShipment max() { return maxval; }
+
+	HoursPerShipment(float _hoursPerShipment) : 
+		Ordinal<HoursPerShipment, float>(_hoursPerShipment) {
+		if (_hoursPerShipment < minval || _hoursPerShipment > maxval) {
+			cerr << "HoursPerShipment: attempted to set illegal value" << endl;
+			throw "invalid value";
+		}
+	}
 };
 
 enum ExpediteOptions {
@@ -237,8 +292,34 @@ class Segment;
 class Location : public Fwk::PtrInterface<Location> {
 public:
 
+	class Notifiee;
+
   typedef Fwk::Ptr<Location> Ptr;
   typedef vector<Fwk::Ptr<Segment> >::iterator SegmentIterator;
+  typedef vector<Notifiee *>::iterator NotifieeIterator;
+
+  class Notifiee : public Fwk::PtrInterface<Notifiee> {
+  public:
+    typedef Fwk::Ptr<Notifiee> Ptr;
+
+    Location::Ptr notifier() const { return notifier_; }
+    virtual void notifierIs(const Location::Ptr _notifier);
+
+    // Events
+    virtual void onShipmenet() {};
+
+    static Notifiee::Ptr NotifieeIs() {
+       Ptr m = new Notifiee();
+       return m;
+    }
+
+    ~Notifiee();
+
+   protected:
+    Notifiee() {}
+    Location::Ptr notifier_;
+
+   };
 
 	string name() const { return name_; }
 	void nameIs(string name) { name_ = name;}
@@ -251,26 +332,78 @@ public:
 
 	LocationType type() const { return type_; }
 
+	void notifieeNew(Notifiee *n);
+	void notifieeDel(Notifiee *n);
+
+
 protected:
 	Location(string name, LocationType type) : name_(name), type_(type) {};
 	string name_;
 	LocationType type_;
   vector<Fwk::Ptr<Segment> > segments_;
-
-//subscribe to notifications from segments that are added to it.
+  vector<Notifiee *> notifiee_;
 };
 
 class Customer : public Location {
 public:
 	typedef Fwk::Ptr<Customer> Ptr;
+	typedef vector<Notifiee *>::iterator NotifieeIterator;
 
 	static Ptr CustomerIs(string name) {
 		Ptr loc = new Customer(name);
 		return loc;
 	} 
 
+	class Notifiee : public Location::Notifiee {
+  public:
+    typedef Fwk::Ptr<Notifiee> Ptr;
+
+    virtual void notifierIs(const Customer::Ptr _notifier);
+    Customer::Ptr notifier() const { return notifier_; }
+
+    // Events
+    virtual void onTransferRate() {};
+    virtual void onShipmentSize() {};
+    virtual void onDestination() {};
+
+    static Notifiee::Ptr NotifieeIs() {
+       Ptr m = new Notifiee();
+       return m;
+    }
+
+    ~Notifiee();
+
+   protected:
+    Notifiee() {}
+    Customer::Ptr notifier_;
+   };
+
+	/* source attributes */
+  void transferRateIs(ShipmentsPerDay _transferRate);
+	ShipmentsPerDay transferRate() const { return transferRate_; }
+
+	void shipmentSizeIs(Packages _shipmentSize);
+	Packages shipmentSize() const { return shipmentSize_; }
+
+	void destinationIs(Customer::Ptr _destination);
+	Customer::Ptr destination() const { return destination_; }
+
+	/* destination attributes */
+	Shipments shipmentsReceived() const { return shipmentsReceived_; }
+	HoursPerShipment averageLatency() const { return shipmentsReceived_.value() / totalLatency_.value(); }
+	Dollars totalCost() const { return totalCost_; }
+
 protected:
-	Customer(string name) : Location(name, CustomerLocation) {}
+	Customer(string name) : Location(name, CustomerLocation),
+		 transferRate_(0), shipmentSize_(0), destination_(NULL),
+			totalCost_(0), totalLatency_(0), shipmentsReceived_(0) {}
+	
+	ShipmentsPerDay transferRate_;
+	Packages shipmentSize_;
+	Customer::Ptr destination_;
+	Dollars totalCost_;
+	Hours totalLatency_;
+	Shipments shipmentsReceived_;
 };
 
 class Terminal : public Location {
@@ -471,8 +604,8 @@ public:
 	MilesPerHour speed() const { return speed_; }
 	void speedIs(MilesPerHour _speed);
 
-	PackageCapacity capacity() const { return capacity_; }
-	void capacityIs(PackageCapacity _capacity);
+	Packages capacity() const { return capacity_; }
+	void capacityIs(Packages _capacity);
 
 	DollarsPerMile costPerMile() const { return costPerMile_; }
 	void costPerMileIs(DollarsPerMile _costPerMile);
@@ -481,7 +614,7 @@ protected:
 	FleetDesc() : speed_(1), capacity_(1), costPerMile_(1) {}
 	string name_;
 	MilesPerHour speed_;
-	PackageCapacity capacity_;
+	Packages capacity_;
 	DollarsPerMile costPerMile_;
 
 };
