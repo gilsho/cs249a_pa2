@@ -85,6 +85,10 @@ public:
 		///
 		virtual void instanceDel(const string& name) = 0;
 
+    virtual string attribute(const string& name) = 0;
+
+    virtual void attributeIs(const string& name, const string& v) = 0;
+
 };
 
 ///

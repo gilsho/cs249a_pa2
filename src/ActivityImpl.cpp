@@ -3,6 +3,14 @@
 
 #include "ActivityImpl.h"
 
+#define DEBUG_ACTIVITY 1
+
+#if DEBUG_ACTIVITY
+#define LOG(x) cout << "[" << __func__ << "]: " \
+								 << x << endl;
+#else
+#define LOG(x)
+#endif
 
 Fwk::Ptr<Activity::Manager> activityManagerInstance() {
     return ActivityImpl::ManagerImpl::activityManagerInstance();
@@ -48,6 +56,9 @@ Activity::Ptr ManagerImpl::activity(const string& name) const {
     
 void ManagerImpl::activityDel(const string& name) {
 	activities_.erase(name);
+
+	//remove from queue
+
 }
     
 void ManagerImpl::lastActivityIs(Activity::Ptr activity) {
@@ -55,6 +66,7 @@ void ManagerImpl::lastActivityIs(Activity::Ptr activity) {
 }
 
 void ManagerImpl::nowIs(Time t) {
+	LOG("advancing time to: " << t.value());
 	//find the most recent activites to run and run them in order
 	while (!scheduledActivities_.empty()) {
 	    
@@ -63,15 +75,18 @@ void ManagerImpl::nowIs(Time t) {
 
     //if the next time is greater than the specified time, break
     //the loop
-    if (nextToRun->nextTime() > t) {
+    if (nextToRun->status() == Activity::deleted ||
+    	nextToRun->nextTime() > t) {
 			break;
     }
 	    
     //calculate amount of time to sleep
-    Time diff = Time(nextToRun->nextTime().value() - now_.value());
+    //Time diff = Time(nextToRun->nextTime().value() - now_.value());
 	    
     //sleep 100ms (100,000 microseconds) for every unit of time
     // usleep(( ((int)diff.value()) * 100000));
+
+    LOG("running activity: " << nextToRun->name());
 	    
     now_ = nextToRun->nextTime();
 

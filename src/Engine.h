@@ -1,6 +1,15 @@
 
 #define INSTANCE_OF(x, C) (dynamic_cast<C>((x)) != 0)
 
+#define DEBUG_ENGINE 1
+
+#if DEBUG_ENGINE
+#define LOG(x) cout << "[" << __func__ << "]: " \
+                 << x << endl;
+#else
+#define LOG(x)
+#endif
+
 #ifndef ENGINE_H
 #define ENGINE_H
 
@@ -16,7 +25,7 @@
 #include "Ptr.h"
 #include "Instance.h"
 #include "Nominal.h"
-
+#include "Activity.h"
 #include <typeinfo>
 
 using std::vector;
@@ -210,6 +219,13 @@ public:
 
 	bool operator==(const Packages& v) const
 	{ return Nominal::value_ == v.value_; }
+
+	Packages operator+=(const Packages& v)
+	{ return value_ += v.value_; }
+
+	Packages operator-=(const Packages& v)
+	{ return value_ -= v.value_; }
+
 };
 
 class ShipmentsPerDay : public Ordinal<ShipmentsPerDay, unsigned int> {
@@ -287,6 +303,8 @@ enum LocationType {
 };
 
 
+class Shipment;
+
 class Segment;
 
 class Location : public Fwk::PtrInterface<Location> {
@@ -296,6 +314,7 @@ public:
 
   typedef Fwk::Ptr<Location> Ptr;
   typedef vector<Fwk::Ptr<Segment> >::iterator SegmentIterator;
+  typedef vector<Fwk::Ptr<Shipment> >::iterator ShipmentIterator;
   typedef vector<Notifiee *>::iterator NotifieeIterator;
 
   class Notifiee : public Fwk::PtrInterface<Notifiee> {
@@ -306,7 +325,7 @@ public:
     virtual void notifierIs(const Location::Ptr _notifier);
 
     // Events
-    virtual void onShipmenet() {};
+    virtual void onShipment(Fwk::Ptr<Shipment> shp) {};
 
     static Notifiee::Ptr NotifieeIs() {
        Ptr m = new Notifiee();
@@ -330,6 +349,11 @@ public:
 	uint32_t segments() const { return segments_.size(); }
 	SegmentIterator segmentIterator() { return segments_.begin(); };
 
+	virtual void shipmentIs(Fwk::Ptr<Shipment> shp);
+	ShipmentIterator shipmentIter() { return shipments_.begin(); }
+	void shipmentDel(Fwk::Ptr<Shipment> shp);
+	uint32_t shipments() const { return shipments_.size(); }
+
 	LocationType type() const { return type_; }
 
 	void notifieeNew(Notifiee *n);
@@ -341,6 +365,7 @@ protected:
 	string name_;
 	LocationType type_;
   vector<Fwk::Ptr<Segment> > segments_;
+  vector<Fwk::Ptr<Shipment> > shipments_;
   vector<Notifiee *> notifiee_;
 };
 
@@ -365,6 +390,7 @@ public:
     virtual void onTransferRate() {};
     virtual void onShipmentSize() {};
     virtual void onDestination() {};
+   	virtual void onShipment(Fwk::Ptr<Shipment> shp) {};
 
     static Notifiee::Ptr NotifieeIs() {
        Ptr m = new Notifiee();
@@ -378,6 +404,8 @@ public:
     Customer::Ptr notifier_;
    };
 
+  // void shipmentIs(Fwk::Ptr<Shipment> shp);
+
 	/* source attributes */
   void transferRateIs(ShipmentsPerDay _transferRate);
 	ShipmentsPerDay transferRate() const { return transferRate_; }
@@ -389,9 +417,18 @@ public:
 	Customer::Ptr destination() const { return destination_; }
 
 	/* destination attributes */
+
 	Shipments shipmentsReceived() const { return shipmentsReceived_; }
-	HoursPerShipment averageLatency() const { return shipmentsReceived_.value() / totalLatency_.value(); }
+	void shipmentsReceivedIs(Shipments _shipmentsReceived) 
+	{ shipmentsReceived_ = _shipmentsReceived; }
+		
 	Dollars totalCost() const { return totalCost_; }
+	void totalCostIs(Dollars _totalCost) { totalCost_ = _totalCost; }
+
+	Hours totalLatency() const { return totalLatency_; }
+	void totalLatencyIs(Hours _totalLatency) 
+	{ totalLatency_ = _totalLatency; }
+
 
 protected:
 	Customer(string name) : Location(name, CustomerLocation),
@@ -476,6 +513,7 @@ public:
   
   typedef Fwk::Ptr<Segment> Ptr;
   typedef vector<Notifiee *>::iterator NotifieeIterator;
+  typedef vector<Fwk::Ptr<Shipment> >::iterator ShipmentIterator;
 
 
   class Notifiee : public Fwk::PtrInterface<Notifiee> {
@@ -487,6 +525,8 @@ public:
 
     // Events
     virtual void onExpedite() {};
+    virtual void onShipment(Fwk::Ptr<Shipment> shp) {};
+    virtual void onShipmentDel(Fwk::Ptr<Shipment> shp) {};
 
     static Notifiee::Ptr NotifieeIs() {
        Ptr m = new Notifiee();
@@ -521,6 +561,23 @@ public:
 	Segment::Ptr returnSegment() const { return return_segment_; }
 	void returnSegmentIs(Ptr seg);
 
+	void shipmentIs(Fwk::Ptr<Shipment> shp);
+	void shipmentDel(Fwk::Ptr<Shipment> shp);
+
+	Shipments shipmentsInFlight() const { return Shipments(shipments_.size()); }
+
+	Shipments shipmentsReceived() const { return shipmentsReceived_; }
+	void shipmentsReceivedIs(Shipments _shipmentsReceived) 
+	{ shipmentsReceived_ = _shipmentsReceived; }
+
+	Shipments shipmentsRefused() const { return shipmentsRefused_; }
+	void shipmentsRefusedIs(Shipments _shipmentsRefused) 
+	{ shipmentsRefused_ = _shipmentsRefused; }
+
+	Shipments capacity() const { return capacity_; }
+	void capacityIs(Shipments _capacity) { capacity_ = _capacity; }
+
+
 	TransportationMode mode() const { return mode_; }
 
 	void notifieeNew(Notifiee *n);
@@ -535,6 +592,10 @@ protected:
 	DifficultyLevel difficulty_;
 	ExpediteOptions expedite_;
 	Ptr return_segment_;
+	vector<Fwk::Ptr<Shipment> > shipments_;
+	Shipments shipmentsReceived_;
+	Shipments shipmentsRefused_;
+	Shipments capacity_;
 	vector<Notifiee *> notifiee_;
 
 };
@@ -587,6 +648,58 @@ virtual void sourceIs(Location::Ptr _source);
 
 protected:
 	TruckSegment(string name, TransportationMode mode) : Segment(name, mode) {}
+};
+
+
+class Shipment : public Fwk::PtrInterface<Shipment> {
+public:
+
+	typedef Fwk::Ptr<Shipment> Ptr;
+
+	enum Status {
+		ready,
+		enroute,
+		refused,
+		delivered
+	};
+
+	static Ptr ShipmentIs(Customer::Ptr _source, 
+												Customer::Ptr _destination,
+												Packages _packages,
+												Time _departure) {
+		Ptr m = new Shipment(_source, _destination, 
+			_packages, _departure);
+		return m;
+	}
+
+	Customer::Ptr source() const { return source_; }
+	Customer::Ptr destination() const { return destination_; }
+	Packages packages() const { return packages_; }
+	
+	Dollars cost() const { return cost_; }
+	void costIs(Dollars _cost) { cost_ = _cost; }
+
+	Hours latency() const { return latency_; }
+	void latencyIs(Hours _latency) { latency_ = _latency; }
+
+	Time departure() const { return departure_; }
+
+	Status status() const { return status_; }
+	void statusIs(Status _status) { status_ = _status; }
+
+protected:
+	Shipment(Customer::Ptr _source, Customer::Ptr _destination, 
+		Packages _packages, Time _departure) : source_(_source), destination_(_destination),
+		status_(enroute), packages_(_packages), cost_(0), latency_(0),
+		departure_(_departure) {}
+
+	Customer::Ptr source_;
+	Customer::Ptr destination_;
+	Status status_;
+	Packages packages_;
+	Dollars cost_;
+	Hours latency_;
+	Time departure_;
 };
 
 
@@ -658,10 +771,12 @@ protected:
 	TruckFleetDesc() : FleetDesc() {}
 };
 
+
 class Network : public Fwk::PtrInterface<Network> {
 public:
 
 	class Notifiee;
+	class RoutingTable;
 
 	typedef Fwk::Ptr<Network> Ptr;
   typedef vector<Notifiee *>::iterator NotifieeIterator;
@@ -670,6 +785,9 @@ public:
 
 
 	Location::Ptr location(string name);
+	LocationIterator locationIter() { return locations_.begin(); }
+	LocationIterator locationIterEnd() { return locations_.end(); }
+	uint32_t locations() { return locations_.size(); }
 	void locationIs(Location::Ptr loc);
 	void locationDel(string name);
 
@@ -686,6 +804,8 @@ public:
 	PlaneFleetDesc::Ptr planeFleet() const { return plane_fleet_; }
 	void planeFleetIs(PlaneFleetDesc::Ptr _plane) { plane_fleet_ = _plane; }
 
+	Fwk::Ptr<RoutingTable> routingTable();
+
 	FleetDesc::Ptr fleet(TransportationMode mode) const {
 		switch(mode) {
 			case TruckMode: return truckFleet().ptr();
@@ -700,6 +820,22 @@ public:
      return net;
   }
 
+  class RoutingTable : public Fwk::PtrInterface<RoutingTable> {
+	public:
+		typedef Fwk::Ptr<Network::RoutingTable> Ptr;
+		Segment::Ptr nextSegment(string source, string dest) { 
+			if (rtable_.find(source) == rtable_.end())
+				return NULL;
+
+			if (rtable_[source].find(dest) == rtable_[source].end())
+				return NULL;
+
+			return rtable_[source][dest]; 
+		}
+	protected:
+		map<string, map<string, Segment::Ptr> > rtable_;
+	};
+
   class Notifiee : public Fwk::PtrInterface<Notifiee> {
   public:
     typedef Fwk::Ptr<Notifiee> Ptr;
@@ -713,7 +849,6 @@ public:
 
     virtual void onSegmentNew(Segment::Ptr seg) {};
     virtual void onSegmentDel(Segment::Ptr seg) {};
-
 
     static Notifiee::Ptr NotifieeIs() {
        Ptr m = new Notifiee();
@@ -731,7 +866,7 @@ public:
 	void notifieeDel(Notifiee *n);
 
 protected:
-	Network(string name) : name_(name) {};
+	Network(string name) : name_(name), routing_table_(NULL) {};
 	~Network();
 	string name_;
 	map<string, Location::Ptr> locations_;
@@ -739,6 +874,7 @@ protected:
 	BoatFleetDesc::Ptr boat_fleet_;
 	PlaneFleetDesc::Ptr plane_fleet_;
 	TruckFleetDesc::Ptr truck_fleet_;
+	Fwk::Ptr<RoutingTable> routing_table_;
   vector<Notifiee *> notifiee_;
 	
 

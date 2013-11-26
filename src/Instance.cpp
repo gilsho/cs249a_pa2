@@ -8,6 +8,7 @@
 #include <boost/tokenizer.hpp>
 #include "Instance.h"
 #include "Engine.h"
+#include "NetworkSimulation.h"
 
 #define INSTANCE_OF(x, C) (dynamic_cast<C>((x)) != 0)
 
@@ -47,9 +48,17 @@ public:
 
     Network::Ptr network() const { return net_; }
 
+       // Instance method
+    string attribute(const string& name);
+
+    // Instance method
+    void attributeIs(const string& name, const string& v);
+
 private:
     map<string,Ptr<InstanceImpl> > instance_;
+    Activity::Manager::Ptr manager_;
     Network::Ptr net_;
+    NetworkSimulation::Ptr netsim_;
     Fwk::Ptr<ConnRep> conn_;
     Fwk::Ptr<StatsRep> stats_;
     Fwk::Ptr<FleetRep> fleet_;
@@ -293,7 +302,10 @@ protected:
 
 ManagerImpl::ManagerImpl() {
     net_ = Network::NetworkIs("network");
-    stats_ = new StatsRep("stats", net_);
+    manager_ = activityManagerInstance();
+    netsim_ = NetworkSimulation::NetworkSimulationNew(net_,manager_);
+    // TODO: comment this back in!
+    // stats_ = new StatsRep("stats", net_);
     fleet_ = new FleetRep("fleet", net_);
     conn_ = new ConnRep("conn", net_);
 }
@@ -402,6 +414,23 @@ void ManagerImpl::instanceDel(const string& name) {
     instance_.erase(t); 
 }
 
+void ManagerImpl::attributeIs(const string& name, const string& v) {
+    if (name == "time") {
+      Time t = atof(v.c_str());
+      manager_->nowIs(t);
+      return;
+    }
+
+    cerr << "Manager: attempted to set invalid attribute." 
+         << endl;   
+    throw "invalid value";
+
+}
+
+string ManagerImpl::attribute(const string& name) {
+  return "";
+}
+
 LocationRep::~LocationRep() {
   statusIs(InstanceDeleted);
 }
@@ -415,20 +444,101 @@ void LocationRep::statusIs(InstanceStatus newstatus) {
 }
 
 string LocationRep::attribute(const string& name) {
+  static const string segmentStr = "segment";
+  static const int segmentStrlen = segmentStr.length();
+
   if (status_ == InstanceDeleted) return "";
-  int i = segmentNumber(name) - 1; //transition to zero-based indexing
-  if (i < 0 || (unsigned) i >= loc_->segments()) {
-    cerr << "LocationRep: attempted to read invalid segment" << endl;
-    throw "invalid value";    
+
+  ostringstream s;
+  s << setprecision(2) << fixed << showpoint;
+
+  if (name.substr(0, segmentStrlen) == segmentStr) {
+    int i = segmentNumber(name) - 1; //transition to zero-based indexing
+    if (i < 0 || (unsigned) i >= loc_->segments()) {
+      cerr << "LocationRep: attempted to read invalid segment" << endl;
+      throw "invalid value";    
+    }
+    Segment::Ptr seg = *(loc_->segmentIterator() + i);
+    return seg->name();
   }
-  Segment::Ptr seg = *(loc_->segmentIterator() + i);
-  return seg->name();
+
+  Customer::Ptr cust = dynamic_cast<Customer *>(loc_.ptr());
+
+  if (cust != NULL) {
+    if (name == "transfer rate") {
+      s << cust->transferRate().value();
+      return s.str();
+    }
+
+    if (name == "shipment size") {
+      s << cust->shipmentSize().value();
+      return s.str();
+    }
+
+    if (name == "destination") {
+      return cust->destination()->name();
+    }
+
+    if (name == "shipments received") {
+      s << cust->shipmentsReceived().value();
+      return s.str();
+    }
+
+    if (name == "average latency") {
+      if (cust->shipmentsReceived().value() == 0)
+        return "0.00";
+      
+      float avgLatency = cust->totalLatency().value() /
+        cust->shipmentsReceived().value();
+      s << avgLatency; 
+
+      return s.str();
+    }
+
+    if (name == "total cost") {
+      s << cust->totalCost().value();
+      return s.str();
+    }
+  }
+
+  cerr << "LocationRep: invalid attempt to read attribute" << endl;
+    throw "invalid value";
+
 }
 
 
 void LocationRep::attributeIs(const string& name, const string& v) {
-    cerr << "LocationRep: invalid attempt to set attribute" << endl;
-    throw "invalid value";
+
+  Customer::Ptr cust = dynamic_cast<Customer *>(loc_.ptr());
+
+  if (cust != NULL) {
+    if (name == "transfer rate") {
+      ShipmentsPerDay s = atoi(v.c_str());
+      cust->transferRateIs(s);
+      return;
+    }
+
+    if (name == "shipment size") {
+      Packages p = atoi(v.c_str());
+      cust->shipmentSizeIs(p);
+      return;
+    }
+
+    if (name == "destination") {
+      Customer::Ptr dcust = dynamic_cast<Customer *>(net_->location(v).ptr());
+      if (v != "" && !dcust) {
+        cerr << "LocationRep: attempted to set source to invalid location" 
+            << endl;
+        throw "invalid value";
+      }
+      cust->destinationIs(dcust);
+      return;
+    }
+
+  }
+
+  cerr << "LocationRep: invalid attempt to set attribute" << endl;
+  throw "invalid value";
 }
 
 static const string segmentStr = "segment";
@@ -492,6 +602,21 @@ string SegmentRep::attribute(const string& name) {
       return "no";
   }
 
+  if (name == "shipments received") {
+      s << seg_->shipmentsReceived().value();
+      return s.str();
+  }
+
+  if (name == "shipments refused") {
+      s << seg_->shipmentsRefused().value();
+      return s.str();
+  }
+
+  if (name == "capacity") {
+      s << seg_->capacity().value();
+      return s.str();
+  }
+
   cerr << "SegmentRep: attempted to access invalid attribute" << endl;
   throw "invalid value";
 
@@ -543,6 +668,11 @@ void SegmentRep::attributeIs(const string& name, const string& v) {
           cerr << "SegmentRep: invalid value for expedite support." << endl;
           throw "invalid value";               
         }
+    }
+
+    else if (name == "capacity") {
+      Shipments s = atof(v.c_str());
+      seg_->capacityIs(s);
     }
 }
 
