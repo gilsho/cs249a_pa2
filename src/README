@@ -172,7 +172,8 @@ following statistics:
 - average received/refused shipments in total (111): 15.036/8.20721
 
 We note that in the in the deterministic case the number of shipments received
-at the destination is siginificantly lower (by a factor of 1.6) than in the non-deterministic case, whereas the latency is significantly higher (by a factor 
+at the destination is siginificantly lower (by a factor of 1.6) than in the 
+non-deterministic case, whereas the latency is significantly higher (by a factor 
 of 2). We conclude that randomness helps balancing the load in this network.
 
 As far as segment performance, in the non-deterministic case we see less 
@@ -183,8 +184,4 @@ suggests that we derive our imporvements solely due to the better utilization
 improved of our bottleneck segment at the third layer. Hence, randomness is
 only beneficial under heavy loads. Under light utilization of segments 
 non-determinism hurts us.
-
-
-Extra-Credit
-============
 

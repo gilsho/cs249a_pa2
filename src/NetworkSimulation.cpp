@@ -1,13 +1,6 @@
 
 #include "NetworkSimulation.h"
-#define DEBUG_NETWORK_SIMULATION 1
 
-#if DEBUG_NETWORK_SIMULATION
-#define LOG(x) cout << "[" << __func__ << "]: " \
-								 << x << endl;
-#else
-#define LOG(x)
-#endif
 
 namespace Shipping {
 
@@ -20,7 +13,6 @@ NetworkSimulation::NetworkSimulation(Network::Ptr _net,
 }
 
 void NetworkSimulation::NetworkReactor::onLocationNew(Location::Ptr loc) {
-	LOG("reactor called");
 	Customer::Ptr cust = dynamic_cast<Customer *>(loc.ptr());
 	if (cust != NULL)	{
 		owner_->customerReactorNew(cust);
@@ -37,7 +29,6 @@ void NetworkSimulation::NetworkReactor::onLocationDel(Location::Ptr loc) {
 }
 
 void NetworkSimulation::NetworkReactor::onSegmentNew(Segment::Ptr seg) {
-	LOG("reactor called");
 	owner_->segmentReactorNew(seg);
 }
 
@@ -47,7 +38,6 @@ void NetworkSimulation::NetworkReactor::onSegmentDel(Segment::Ptr seg) {
 
 
 void NetworkSimulation::customerReactorNew(Customer::Ptr cust) {
-	LOG("creating customer reactor for segment: " << cust->name());
 	CustomerReactor::Ptr reactor = CustomerReactor::ReactorIs(this,cust);
   reactor->notifierIs(cust);
   cust_reactor_.push_back(reactor);
@@ -65,7 +55,6 @@ void NetworkSimulation::customerReactorDel(Customer::Ptr cust) {
 }
 
 void NetworkSimulation::locationReactorNew(Location::Ptr loc) {
-	LOG("creating location reactor for location: " << loc->name());
 	LocationReactor::Ptr reactor = LocationReactor::ReactorIs(this);
   reactor->notifierIs(loc);
   loc_reactor_.push_back(reactor);
@@ -84,7 +73,6 @@ void NetworkSimulation::locationReactorDel(Location::Ptr loc) {
 
 
 void NetworkSimulation::segmentReactorNew(Segment::Ptr seg) {
-	LOG("creating segment reactor for segment: " << seg->name());
   SegmentReactor::Ptr reactor = SegmentReactor::ReactorIs(this);
   reactor->notifierIs(seg);
   seg_reactor_.push_back(reactor);
@@ -114,32 +102,21 @@ void NetworkSimulation::CustomerReactor::onDestination() {
 }
 
 void NetworkSimulation::CustomerReactor::onShippingSettings_() {
-	LOG("shipping settings changed");
 	if (notifier_->transferRate() > 0 &&
 			notifier_->shipmentSize() > 0 &&
 			notifier_->destination() != NULL) {
 
-		LOG("initiating shipments");
 		act_->statusIs(Activity::nextTimeScheduled);
 
 	} else {
-		LOG("disabling shipment injecting");
-		LOG("activity is: " << act_->name());
 		act_->statusIs(Activity::deleted);
 	}
 }
 
 
 void NetworkSimulation::LocationReactor::onShipment(Shipment::Ptr shp) {
-	LOG("onShipment called."); 
 	Location::Ptr loc = notifier_;
 	Network::Ptr net = owner_->network();
-
-	LOG("'" << loc->name() << "' received shipment destined to: '"
-		<< shp->destination()->name() << "', status is: "
-		<< shp->status());
-
-	LOG("# of pending shipments: " << loc->shipments());
 
 	if (shp->status() == Shipment::refused) {
 		return;
@@ -166,7 +143,7 @@ void NetworkSimulation::LocationReactor::onShipment(Shipment::Ptr shp) {
 	if (seg != NULL)
 		seg->shipmentIs(shp);
 	else
-		LOG("no route found. dropping shipment");
+		cerr << "no route found. dropping shipment" << endl;
 }
 
 void NetworkSimulation::SegmentReactor::forwardReactorDel(
@@ -185,18 +162,13 @@ void NetworkSimulation::SegmentReactor::onShipmentDel(Shipment::Ptr shp) {
 	Segment::Ptr seg = notifier_;
 	Network::Ptr net = owner_->network();
 	Location::Ptr source = seg->source();
-	LOG("onShipmentDel called on segment: " << seg->name());
-	LOG("# of pending shipments: " << source->shipments());
 	//retransmit refused shipments at the source
 	for (Location::ShipmentIterator it = source->shipmentIter();
 			 it != source->shipmentIter() + source->shipments();
 			 ++it) {
-		LOG("about to retransmit!");
 		Shipment::Ptr refshp = (*it);
 		if (net->routingTable()->nextSegment(
 			source->name(),refshp->destination()->name()) == seg) {
-			LOG("retransmitting refused shipment from: '" << 
-				source->name() << "' to segment: '" << seg->name() << "'");
 			source->shipmentDel(refshp);
 			refshp->statusIs(Shipment::enroute);
 			seg->shipmentIs(refshp);
@@ -212,17 +184,10 @@ void NetworkSimulation::SegmentReactor::onShipment(Shipment::Ptr shp) {
 	Network::Ptr net = owner_->network();
 	FleetDesc::Ptr fleet = net->fleet(seg->mode());
 
-	LOG(seg->name() << " received shipment");
-
 	//update cost and latency
 	Dollars segcost = Dollars(seg->length().value() * 
 		fleet->costPerMile().value() * seg->difficulty().value());
 	shp->costIs(shp->cost().value() + segcost.value());
-
-	LOG("updating cost of shipment to: "
-		<< shp->cost().value()
-	 	<< " and latency to: "
-	 	<< shp->latency().value());
 
 	//update segment statistics
 	seg->shipmentsReceivedIs(seg->shipmentsReceived().value() + 1);
@@ -243,13 +208,7 @@ void NetworkSimulation::SegmentReactor::onShipment(Shipment::Ptr shp) {
 	Hours oneTripDuration = seg->length() / fleet->speed();
 	unsigned trips = ceil((float)shp->packages().value() / seg->capacity().value());
 	Hours totalDuration = oneTripDuration.value() * trips;
-	LOG("shipment packages: " << shp->packages().value() << ", segment capacity: "
-		<< seg->capacity().value()
-		<< ", oneTripDuration: " << oneTripDuration.value() << ", trips: "
-		<< trips << ", total duration: " << totalDuration.value());
 	act->nextTimeIs(Time(manager->now().value() + totalDuration.value()));
-	LOG("scheduling activity: " << act->name()
-		<< " for time: " << manager->now().value() + totalDuration.value());
 	act->statusIs(Activity::nextTimeScheduled);
 
 }
@@ -257,7 +216,6 @@ void NetworkSimulation::SegmentReactor::onShipment(Shipment::Ptr shp) {
 void NetworkSimulation::ForwardActivityReactor::onStatus() {
 	switch(act_->status()) {
 		case Activity::executing: {
-			LOG("executing");
 			seg_->shipmentDel(shp_);
 			Hours latency = manager_->now().value() - shp_->departure().value();
 			shp_->latencyIs(latency);
@@ -270,7 +228,6 @@ void NetworkSimulation::ForwardActivityReactor::onStatus() {
 		} break;
 
     case Activity::nextTimeScheduled: {
-			LOG("regsitering activity: " << act_->name());
 			manager_->lastActivityIs(act_);
 		}	break;
 
@@ -284,11 +241,8 @@ void NetworkSimulation::InjectActivityReactor::onStatus() {
 	switch(act_->status()) {
 
 		case Activity::executing: {
-			LOG("executing");
 			Shipment::Ptr shp = Shipment::ShipmentIs(cust_,
 				cust_->destination(), cust_->shipmentSize(), manager_->now());
-			LOG("Injecting shipment to: " << cust_->name()
-				<< " at time: " << manager_->now().value());
 			shp->statusIs(Shipment::enroute);
 			cust_->shipmentIs(shp);
 			
@@ -297,21 +251,16 @@ void NetworkSimulation::InjectActivityReactor::onStatus() {
 		case Activity::free: {
 			Time period = Time(24.0 / cust_->transferRate().value());
 			Time next = Time(act_->nextTime().value() + period.value());
-			LOG("scheduling activity: " << act_->name() 
-				<< " for: " << next.value());
 			act_->nextTimeIs(next);
 			act_->statusIs(Activity::nextTimeScheduled);
 			
 		}	break;
 
 		case Activity::nextTimeScheduled:
-			LOG("regsitering activity: " << act_->name());
 			manager_->lastActivityIs(act_);
 			break;
 
 		case Activity::deleted:
-			LOG("remove activity: " <<
-				act_->name() << " from manager");
 			manager_->activityDel(act_->name());
 			break;
 

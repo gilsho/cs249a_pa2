@@ -3,15 +3,6 @@
 
 #include "ActivityImpl.h"
 
-#define DEBUG_ACTIVITY 1
-
-#if DEBUG_ACTIVITY
-#define LOG(x) cout << "[" << __func__ << "]: " \
-								 << x << endl;
-#else
-#define LOG(x)
-#endif
-
 Fwk::Ptr<Activity::Manager> activityManagerInstance() {
     return ActivityImpl::ManagerImpl::activityManagerInstance();
 }
@@ -66,7 +57,6 @@ void ManagerImpl::lastActivityIs(Activity::Ptr activity) {
 }
 
 void ManagerImpl::nowIs(Time t) {
-	LOG("advancing time to: " << t.value());
 	//find the most recent activites to run and run them in order
 	while (!scheduledActivities_.empty()) {
 	    
@@ -87,8 +77,6 @@ void ManagerImpl::nowIs(Time t) {
     float msec = (int)diff.value() * scaling_factor_.value();
     usleep(msec * 1000);
 
-    LOG("running activity: " << nextToRun->name());
-	    
     now_ = nextToRun->nextTime();
 
     //run the minimum time activity and remove it from the queue

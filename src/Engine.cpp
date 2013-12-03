@@ -82,7 +82,6 @@ void Segment::shipmentIs(Fwk::Ptr<Shipment> shp) {
   //refuse if operating at full capacity
   if (shipments_.size() >= capacity_.value()) {
     ++shipmentsRefused_;
-    LOG("refusing shipment at segment: '" << name_ << "'");
     shp->statusIs(Shipment::refused);
     source_->shipmentIs(shp);
     return;
@@ -236,7 +235,6 @@ void Location::segmentDel(Segment::Ptr seg) {
 }
 
 void Location::shipmentIs(Fwk::Ptr<Shipment> shp) {
-  LOG("location: " << name_ << " received shipment: " << shp.ptr());
   for (ShipmentIterator it = shipments_.begin();
        it != shipments_.end();
        ++it) {
@@ -250,7 +248,6 @@ void Location::shipmentIs(Fwk::Ptr<Shipment> shp) {
        it != notifiee_.end();
        ++it) {
     try {
-      LOG("notifying: " << (*it));
       (*it)->onShipment(shp);
     } catch(...) {}
   }
@@ -304,16 +301,6 @@ Location::Notifiee::~Notifiee() {
   }
 }
 
-// void Customer::shipmentIs(Fwk::Ptr<Shipment> shp) {
-//   //check for duplicates (idempotency)
-//   for (ShipmentIterator it = shipments_.begin();
-//        it != shipments_.end();
-//        ++it) {
-//     if ((*it) == shp) {
-//       return;
-//     }
-//   }
-// }
 
 void Customer::transferRateIs(ShipmentsPerDay _transferRate)  {
   if (_transferRate == transferRate_)
@@ -332,7 +319,6 @@ void Customer::transferRateIs(ShipmentsPerDay _transferRate)  {
 }
 
 void Customer::shipmentSizeIs(Packages _shipmentSize) {
-  LOG("seeting shipment size");
   if (_shipmentSize == shipmentSize_)
     return;
   shipmentSize_ = _shipmentSize;
@@ -464,7 +450,6 @@ Location::Ptr Network::location(string name) {
 }
 
 void Network::locationIs(Location::Ptr loc) {
-  LOG("setting network location");
   // make operation idempotent
   if (locations_.find(loc->name()) != locations_.end())
     return;
@@ -479,7 +464,6 @@ void Network::locationIs(Location::Ptr loc) {
        it != notifiee_.end();
        ++it) {
     try {
-      LOG("notifying reactor " << *it);
       (*it)->onLocationNew(loc);
     } catch(...) {}
   }
@@ -896,18 +880,11 @@ RoutingTableImpl::RoutingTableImpl(Network *net) {
         continue;
       }
 
-      LOG("searching for path between: '" 
-        << src << "' and '" << dst << "'");
-
       PathList::Ptr plist = conn->connect(srcloc,dstloc);
-      LOG("found: " << plist->paths() << " paths");
       Path::Ptr p = selectBestPath(plist);
       Segment::Ptr seg = NULL;
       if (p != NULL && p->segments() != 0)
         seg = *(p->segmentIter());
-     
-      LOG("best segment from:" << src 
-        << " to: " << dst << " is: " << (seg ? seg->name() : " None"));
       m[dst] = seg;
     }
     rtable_[src] = m;
@@ -915,25 +892,13 @@ RoutingTableImpl::RoutingTableImpl(Network *net) {
 }
 
 Path::Ptr RoutingTableImpl::selectBestPath(PathList::Ptr plist) {
-  LOG("searching for best path.");
   if (plist == NULL || plist->paths() == 0) return NULL;
-  
-  LOG("considering " << plist->paths() 
-    << " possible paths.");
-
   Path::Ptr bestPath = *plist->pathIter();
-
-LOG("current path cost: " << bestPath->cost().value()
-      << " with segment: '" << (*bestPath->segmentIter())->name() 
-      << "'");
 
   for (PathList::PathIterator it = plist->pathIter()+1;
      it != plist->pathIter() + plist->paths();
      ++it) {
     Path::Ptr p = *it;
-    LOG("current path cost: " << p->cost().value()
-      << " with segment: '" << (*p->segmentIter())->name() 
-      << "'");
     if (p->cost().value() < bestPath->cost().value()) {
       bestPath = p;
     }
@@ -942,9 +907,7 @@ LOG("current path cost: " << bestPath->cost().value()
 }
 
 Network::RoutingTable::Ptr Network::routingTable() {
-  LOG("fetch request for routing table");
   if (!routing_table_) {
-    LOG("computing new routing table");
     routing_table_ = new RoutingTableImpl(this);
   } 
   return routing_table_;

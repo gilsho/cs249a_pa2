@@ -1,15 +1,6 @@
 
 #define INSTANCE_OF(x, C) (dynamic_cast<C>((x)) != 0)
 
-#define DEBUG_ENGINE 1
-
-#if DEBUG_ENGINE
-#define LOG(x) cout << "[" << __func__ << "]: " \
-                 << x << endl;
-#else
-#define LOG(x)
-#endif
-
 #ifndef ENGINE_H
 #define ENGINE_H
 
