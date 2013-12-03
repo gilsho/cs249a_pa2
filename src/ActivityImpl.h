@@ -79,13 +79,18 @@ public:
 
   virtual void lastActivityIs(Activity::Ptr activity);
 
+  virtual MillisecondsPerHour scalingFactor() const { return scaling_factor_; }
+  virtual void scalingFactorIs(MillisecondsPerHour hpms)
+  { scaling_factor_ = hpms; }
+
 protected:
-    ManagerImpl() : now_(0) {}
+    ManagerImpl() : now_(0), scaling_factor_(0) {}
 
     //Data members
     priority_queue<Activity::Ptr, vector<Activity::Ptr>, ActivityComp> scheduledActivities_;
     map<string, Activity::Ptr> activities_; //pool of all activities
     Time now_;
+    MillisecondsPerHour scaling_factor_;
 
     //singleton instance
     static Fwk::Ptr<Activity::Manager> activityInstance_;	

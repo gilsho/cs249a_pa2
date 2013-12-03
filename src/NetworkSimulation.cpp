@@ -165,6 +165,8 @@ void NetworkSimulation::LocationReactor::onShipment(Shipment::Ptr shp) {
 
 	if (seg != NULL)
 		seg->shipmentIs(shp);
+	else
+		LOG("no route found. dropping shipment");
 }
 
 void NetworkSimulation::SegmentReactor::forwardReactorDel(
@@ -238,10 +240,16 @@ void NetworkSimulation::SegmentReactor::onShipment(Shipment::Ptr shp) {
 
 	// schedule activity
 	/* consider expedite support */	
-	Hours duration = seg->length() / fleet->speed();
-	act->nextTimeIs(Time(manager->now().value() + duration.value()));
+	Hours oneTripDuration = seg->length() / fleet->speed();
+	unsigned trips = ceil((float)shp->packages().value() / seg->capacity().value());
+	Hours totalDuration = oneTripDuration.value() * trips;
+	LOG("shipment packages: " << shp->packages().value() << ", segment capacity: "
+		<< seg->capacity().value()
+		<< ", oneTripDuration: " << oneTripDuration.value() << ", trips: "
+		<< trips << ", total duration: " << totalDuration.value());
+	act->nextTimeIs(Time(manager->now().value() + totalDuration.value()));
 	LOG("scheduling activity: " << act->name()
-		<< " for time: " << manager->now().value() + duration.value());
+		<< " for time: " << manager->now().value() + totalDuration.value());
 	act->statusIs(Activity::nextTimeScheduled);
 
 }

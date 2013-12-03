@@ -129,7 +129,7 @@ void Segment::shipmentDel(Fwk::Ptr<Shipment> shp) {
 Segment::Segment(string name, TransportationMode mode) : name_(name),
   mode_(mode), length_(0), difficulty_(1.0), 
   expedite_(ExpediteNotSupported),
-  shipmentsReceived_(0), shipmentsRefused_(0), capacity_(1) {} 
+  shipmentsReceived_(0), shipmentsRefused_(0), capacity_(10) {} 
 
 
 void Segment::Notifiee::notifierIs(const Segment::Ptr _notifier) {
@@ -852,6 +852,7 @@ PathList::Ptr Connectivity::connect(Location::Ptr start, Location::Ptr end)
     }
   }
 
+
   while(!toExplore.empty()) {
     Path::Ptr p = toExplore.front();
     toExplore.pop();
@@ -899,14 +900,14 @@ RoutingTableImpl::RoutingTableImpl(Network *net) {
         << src << "' and '" << dst << "'");
 
       PathList::Ptr plist = conn->connect(srcloc,dstloc);
+      LOG("found: " << plist->paths() << " paths");
       Path::Ptr p = selectBestPath(plist);
-
       Segment::Ptr seg = NULL;
       if (p != NULL && p->segments() != 0)
         seg = *(p->segmentIter());
      
       LOG("best segment from:" << src 
-        << " to: " << dst << " is:" << seg->name());
+        << " to: " << dst << " is: " << (seg ? seg->name() : " None"));
       m[dst] = seg;
     }
     rtable_[src] = m;
@@ -914,7 +915,7 @@ RoutingTableImpl::RoutingTableImpl(Network *net) {
 }
 
 Path::Ptr RoutingTableImpl::selectBestPath(PathList::Ptr plist) {
-  LOG("searching for best path");
+  LOG("searching for best path.");
   if (plist == NULL || plist->paths() == 0) return NULL;
   
   LOG("considering " << plist->paths() 

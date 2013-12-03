@@ -80,11 +80,12 @@ void ManagerImpl::nowIs(Time t) {
 			break;
     }
 	    
-    //calculate amount of time to sleep
-    //Time diff = Time(nextToRun->nextTime().value() - now_.value());
+    // calculate amount of time to sleep
+    Time diff = Time(nextToRun->nextTime().value() - now_.value());
 	    
-    //sleep 100ms (100,000 microseconds) for every unit of time
-    // usleep(( ((int)diff.value()) * 100000));
+    // sleep scaling_factor_ ms for every unit of time
+    float msec = (int)diff.value() * scaling_factor_.value();
+    usleep(msec * 1000);
 
     LOG("running activity: " << nextToRun->name());
 	    

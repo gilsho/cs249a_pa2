@@ -35,8 +35,6 @@ int main(int argc, char *argv[]) {
     Ptr<Instance> s22 = manager->instanceNew("s22", "Truck segment");  
     Ptr<Instance> s31 = manager->instanceNew("s31", "Truck segment");  
     Ptr<Instance> s32 = manager->instanceNew("s32", "Truck segment");  
-    // Ptr<Instance> s41 = manager->instanceNew("s41", "Truck segment");  
-    // Ptr<Instance> s42 = manager->instanceNew("s42", "Truck segment");  
 
     // -- Segment lengths
     s11->attributeIs("length", "100");
@@ -45,8 +43,6 @@ int main(int argc, char *argv[]) {
     s22->attributeIs("length", "250");
     s31->attributeIs("length", "300");
     s32->attributeIs("length", "350");
-    // s41->attributeIs("length", "400");
-    // s42->attributeIs("length", "450");
 
     // -- Connections
     s11->attributeIs("source", "la");
@@ -73,13 +69,15 @@ int main(int argc, char *argv[]) {
     manager->attributeIs("time", "100");
     Ptr<Instance> s41 = manager->instanceNew("s41", "Truck segment");
     Ptr<Instance> s42 = manager->instanceNew("s42", "Truck segment");
-    // s41->attributeIs("length", "20");
-    // s42->attributeIs("length", "20");
-    // s41->attributeIs("source", "vancouver");
-    // s42->attributeIs("source", "sf");
-    // s41->attributeIs("return segment", "s42");
+    s41->attributeIs("length", "20");
+    s42->attributeIs("length", "20");
+    s41->attributeIs("source", "vancouver");
+    s42->attributeIs("source", "sf");
+    s41->attributeIs("return segment", "s42");
 
-    // manager->attributeIs("time", "150");
+    manager->attributeIs("scale", "1000");
+
+    manager->attributeIs("time", "200");
 
     // Check stats
     cout << "Shipments received/refused in s11: "

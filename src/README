@@ -1,126 +1,190 @@
 user: gilsho
 user: rmferrer
 
-ENGINE LAYER
-===============
-Our enginer design consists of the values types and entity types described 
-below. The main object in our engine strucutre is the Network class, which
-contains a vector of locations and a vector of segments. Locations and Segments
-are added and removed from the system via the network interface. The Network
-class issues notification when new locations and/or segments are added and
-deleted, to which the Stats class subscribes to in order to keep track of
-the statistics. Each location maintains a list of all the segments for which it
-is the source, and all segments maintain a reference to their source location
-and the return segment to which they are paired with. The location and segment
-classes are responsible for maintainining the invariants in the system, namely 
-that once a segment is deleted from a location, the segment not longer lists 
-that location as its source, or when one segment (call it segment A) changes 
-return segments, it notifies the old segment that was listed as its return 
-segment (call it segmetn B) that A is no longer its (B's) return segment true.
-The Segment class also issues notifications when the expedite attribute changes.
-The same Stats class maintains a Reactor for every segment and bounces back
-the notifications to itself.  Extra caution is taken care when maintaining
-the invariants, for example when setting segment's source to NULL. Such as 
-operation calls the segment's source segmentDel() method, which might in turn
-call sourceIs() on the segment being removed and result in an infinite
-recursion. We solved this problem by first copying the old valus to a temporary
-container, setting the current value to NULL, and then call the sourceIs 
-function on the location. This ensures the loop will stop. Another important
-point to mention, is that the Connectivity object, which issues the explore
-and connect queries, returns its result to the Rep layer in form of a 
-PathList object, which is a collection of Path objects.
+High-Level Structure of Code
+============================
+The main functionality for managing the simulation is handled by the 
+NetworkSimulation class. The NetworkSimulation class registers itself as a
+reactor to the Network class, listening to such events as the addition and 
+removal of segments and locations. For every new segment created, the
+NetworkSimulation class creates a new segment reactor for it, and for every
+new location created, the NetworkSimulation creates a location reactor for it.
+Moreover, if the location happens to be of type Customer, an *additional*
+customer reactor is created as well. The NetworkSimulation is in charge of
+maintining consistency among location/segments and their respective reactors.
+The NetworkSimulation class is the owner of such reactors to avoid their
+getting deleted. The NetworkSimulation class also stores an activity
+manager to handle all the activities associated with the Simulation.
+
+* Customer reactors listen to changes in "shipment settings", i.e. all the
+properties necessary to initiate shipments including transfer rate, destination
+and shipment size. Once the reactor for a particular customer detects that all 
+appropriate settings have been set, it schedules an activity that introduces
+a new shipment into the customer location, at an interval derived from the
+transfer rate.
+
+* Location reactors listen to new shipments arriving at the location. The
+location reactor is in charge of looking up the next segment in the Network's
+routing table and transfering the shipment to that segment
+
+* Segment reactors listen to new shipments arriving at the segments. They 
+contains the logic for detecting if the segment is full. If it is, the shipment
+is sent back to the source location and marked as "refused". Otherwise, the 
+duration needed for the shipment to traverse the segment is calculated and an
+activity is created to be woken up at that time in the future to forward the
+shipment into the location on the other end of the segment.
+
+* Routing table - one addition to the Network structure is a "routing table"
+object, which is a 2D grid, in which rows and columns represent locations in
+the network, and the cells represent the segment for which to forward the 
+shipment along to. Thus a location L interested in routing a package to 
+destination D, will look up the row associated with L, the column associated
+with D, and transfer the shipment to the segment S at that grid position.
+The routing table starts out NULL, and everytime a request to access the 
+routing table arrives, the network generates the routing table (lazily) by
+computing the shortest path between every pair of nodes in the graph. 
+Whenever a new location or segments are added or removed from the Network or 
+from a location, the Network nullifies the routing table, forcing re-generation 
+at the next request.
+
+* Real-Time activities are represented via an attribute of the activity 
+manager called "scale". The value represents how many milliseconds to trade off
+for one hours in the simulation. When set to 0, this is equivalent to having a 
+pure virtual time simulation.
 
 
-
-                                               +-----------------------------+
-                                               |            Stats            |
-                +-----------------------+      |+-------+ +-------+ +-------+|
-+------------+  |                       |<------+Reactor| |Reactor| |Reactor||
-|Connectivity|->|      Network          |      |+-------+ +--+----+ +--+----+|
-+------------+  |                       |      +-------------|---------|-----+
-                +----+----------+------++                    |         |
-                 |   |          |      |                     |         |
-                 v   |          v      |                     |         |
-          +--------+ |      +--------+ |                     |         |
-          |Location| |      |Location| |                     |         |
-          ++------++ |      +-------++ |                     |         |
-                 ^|  |             ^|  |                     |         |
-                 ||  |             ||  |                     |         |
-                 |v  v             |v  v                     |         |
-                +-------+        +--------+                  |         |
-                |Segment+------->|Segment |                  |         |
-                |       |<-------+        |<-----------------+         |
-                +-------+        +--------+                            |
-                     ^                                                 |
-                     |                                                 |
-                     |                                                 |
-                     +-------------------------------------------------+
-
-Value Types
------------
-Factor
-DifficultyLevel
-Hours
-Dollars
-DollarsPerMile
-MilesPerHour
-PackageCapacity
+   +---------------------------------------------------------+
+   |                   Network                               |
+   |                                                         |
+   +------+-------------+----------------+-----------+-------+
+          |             |                |           |    ^
+          |             |                |           |    |
+          v             v                v           v    |
+   +-------------+ +----------+    +----------+ +-------+ |
+   | location    | |customer  |    | segment  | |routing| |
+   +-------------+ +----------+    +----------+ |table  | |
+         ^           ^                    ^     +-------+ |
+  +------|-----------|--------------------|---------------|----+
+  |      |           |  NetworkSimulation |               |    |
+  |      |           |                    |               |    |
+  |+-----+---+ +-----+--+ +---------+ +---+------+ +------+--+ |
+  ||location | |customer| |activity | | segment  | | network | |
+  ||reactor  | |reactor | |manager  | | reactor  | | reactor | |
+  |+---------+ +-----+--+ +--+--+---+ +-----+----+ +---------+ |
+  +---------------^--|-------|--|---------^-|------------------+
+                  |  v       |  |         | v
+               +--+-----+    |  |      +--+-----+
+               |inject  |    |  |      |forward |
+               |activity|    |  |      |activity|
+               |reactor |    |  |      |reactor |
+               +--------+    |  |      +--------+
+                  ^          |  |         ^
+                  |          |  |         |
+               +--+-----+    |  |      +--+------+
+               |activity|<---+  +----> |activity |
+               +--------+              +---------+
 
 
-Entity Types
-------------
-Network 
-Location
- |- Customer
- |- Port
- |- Terminal
-      |- TruckTerminal
-      |- BoatTerminal
-      |- PlaneTerminal
+Design discussion
+================
+- Decoupling state from action - In our design we set forth to separate the
+"action" associated with simulation, which is performed in the form of 
+activities and reactors from the state of the network. To that end we kept the
+Network class as static as possible, and delegated all the simulation 
+functionality to the NetworkSimulation class which consists of reactors to 
+components of the network, activities, and an activity manager to manage
+the "actions" taking place as part of the simulation.
 
-Segment
- |- BoatSegment
- |- PlaneSegment
- |- TruckSegment
+- Routing table - as opposed to other class relevant to the simulation, we 
+decided to place the routing table as a member of the Network class since it is
+inherently related to the state of the network, and should be consistent with
+the set of locations and segments that are members of the network. Also,
+given our use case of having the network remain static after intialization,
+this approach to routing would front-load all the necessary computation at
+the beginnin, and would yield fast performance throughout the simulation
 
-Stats
- |- Stats Config
-
-Connectivity
-Path 
-PathList
-
-Named Descriptions
--------------------
-FleetDesc
- |-BoatFleetDesc
- |-PlaneFleetDesc
- |-TruckFleetDesc
+- Real-Time activity - We aimed encapsulate the the time management into a 
+single class. As such, and due to the little adjustments necessary to enable
+"real-time" simulation, we decided to incoporate the functionaliy of the 
+real-time activity manager into the same activity manager class as the virtual
+activity manager.
 
 
-REP LAYER
-==========
-The Rep layer consists of Instance objects. Each Instance roughly corresponds 
-to one object in the engine layer. The Segment and Location Instances also
-keep a smart pointer to the "Network" engine object, to ensure it does not go 
-out of scope while the instance is alive. Instances are implemented via the
-InstanceImpl class, which introduces a "status" attribute. The status attribute
-is a mechanism to allow for deleting Instances while maintaing a valid pointer 
-to an Instance object. Once a status is set to "InstanceDeleted", the underlying
-engine object or objects are safely removed, and all subsequent reads or writes
-to the object will do nothgint and return the empty string. Every instance
-object, when it does out of scope, sets its status to "InstanceDeleted" to 
-ensure that the Enginer object for which it is a proxy it is removed from the 
-network.
-
-TESTING
+Testing
 =======
-We constructed an elaborate network in test1.cpp to test the functionality of 
-our system. We also wrote test cases using the gtest framework which are present
-in the "EngineTest.cpp" file (which we included in the src directory for the 
-submission)
+In our verification test, we construct a network consisting of a linear 
+path between 4 locations, with segments connecting each pair of successive 
+locations in both directions. The 2 edge locations are customer locations, and 
+they initiate shipments to each other. We run this simulation for 100 hours, and 
+then introduce a new pair of segments into the network, which short-circuits 
+the paths between the customer. We then run the simulation for 100 more hours. 
 
 
+ +-----+     +----+    +---------+   +-----------+
+ | la  +---->| sf +--->| seattle +-->| vancouver |
+ |     |<----+    |<---+         |<--+           |
+ +---+-+     +----+    +---------+   +--+--------+
+   ^ |                                ^ |
+   | +--------------------------------+ |
+   +------------------------------------+
+              (Added later)
+
+* For the first 100 hours, we saw the same number of shipments being received
+and refused accross all segments in a particular direction, which corroborated
+our intuition. 
+
+* After running the simulation for an additional 100 hours, we saw that the 
+network correctly reconfigured the routing table to route shipments towards the
+new path that we created. Segments on the new path were accumulating more 
+shipments received/refused, and the number of shipments accumulated on segments
+which were now off the path remain constant. We also noticed that the avg.
+cost and latency for shipments at the final destinations were reduced.
+
+* As we increase the shipment rate at the sources, we note that the longest
+link becomes congested and the number of received packages drops siginificantly.
+As we increase the shipment rate even further, the second longest link becomes
+congested as well, and the number of received packages at the destinations
+drops even further, matching our intuitions.
 
 
+Experiment
+==========
+
+* When we ran the simulation using a constant shipment size of 100, we obtain
+the following statistics:
+
+- shipments received at destination: 40
+- average latency at destination: 75.00
+- total shipment cost: 60000.00
+- average received/refused shipments in first layer segments (100): 17/0
+- average received/refused shipments in second layer segments (10): 60/130
+- average received/refused shipments in third layer segment (1): 50/490
+- average received/refused shipments in total (111): 21.1712/16.1261
+
+* When we ran the simulation using a random shipment size we obtain the 
+following statistics:
+- shipments received at destination: 66
+- average latency at destination: 34.10
+- total shipment cost: 99000.00
+- average received/refused shipments in first layer segments (100): 13.31/4.97
+- average received/refused shipments in second layer segments (10): 26.2/28.7
+- average received/refused shipments in third layer segment (1): 76/127
+- average received/refused shipments in total (111): 15.036/8.20721
+
+We note that in the in the deterministic case the number of shipments received
+at the destination is siginificantly lower (by a factor of 1.6) than in the non-deterministic case, whereas the latency is significantly higher (by a factor 
+of 2). We conclude that randomness helps balancing the load in this network.
+
+As far as segment performance, in the non-deterministic case we see less 
+segment utilization at the first and second layer segments, in the form of less
+shipments received and more shipments refused, wherease in the top segment, the
+bottleneck of our system, we see a significantly better performance. This 
+suggests that we derive our imporvements solely due to the better utilization
+improved of our bottleneck segment at the third layer. Hence, randomness is
+only beneficial under heavy loads. Under light utilization of segments 
+non-determinism hurts us.
+
+
+Extra-Credit
+============
 

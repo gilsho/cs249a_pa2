@@ -421,6 +421,12 @@ void ManagerImpl::attributeIs(const string& name, const string& v) {
       return;
     }
 
+    if (name == "scale") {
+      MillisecondsPerHour t = atoi(v.c_str());
+      manager_->scalingFactorIs(t);
+      return;
+    }
+
     cerr << "Manager: attempted to set invalid attribute." 
          << endl;   
     throw "invalid value";
@@ -428,7 +434,23 @@ void ManagerImpl::attributeIs(const string& name, const string& v) {
 }
 
 string ManagerImpl::attribute(const string& name) {
-  return "";
+  ostringstream s;
+  s << setprecision(2) << fixed << showpoint;
+  
+  if (name == "time") {
+    s << manager_->now().value();
+    return s.str();  
+  }
+
+  if (name == "scale") {
+    s << manager_->scalingFactor().value();
+    return s.str();
+  }
+
+  cerr << "Manager: attempted to set invalid attribute." 
+       << endl;   
+  throw "invalid value";
+
 }
 
 LocationRep::~LocationRep() {

@@ -18,6 +18,13 @@ public:
     {}
 };
 
+class MillisecondsPerHour : public Ordinal<MillisecondsPerHour, unsigned int> {
+public:
+    MillisecondsPerHour(unsigned int hpms) : Ordinal<MillisecondsPerHour, unsigned int>(hpms)
+    {}
+};
+
+
 class Activity : public Fwk::PtrInterface<Activity> {
  public:
     typedef Fwk::Ptr<Activity> Ptr;
@@ -77,6 +84,9 @@ public:
     virtual void activityDel(const string &name) = 0;
 
     virtual void lastActivityIs(Activity::Ptr) = 0;
+
+    virtual MillisecondsPerHour scalingFactor() const = 0;
+    virtual void scalingFactorIs(MillisecondsPerHour) = 0;
 
     virtual Time now() const = 0;
     virtual void nowIs(Time) = 0;
